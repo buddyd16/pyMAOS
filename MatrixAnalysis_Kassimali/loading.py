@@ -231,29 +231,30 @@ class R2_Point_Moment():
         self.integration_constants()
         
         # Simple End Reactions
-        self.Ri = self.M/self.L
-        self.Rj = -1*self.Ri
+        self.Riy = self.M/self.L
+        self.Rjy = -1*self.Ri
         
         # Piecewise Functions
         # [co....cn x^n] [xa, xb]
         
-        V = [[[self.Ri],[0,self.a]],
-             [[self.Ri],[self.a,self.L]]]
+        Vy = [[[self.Riy],[0,self.a]],
+             [[self.Riy],[self.a,self.L]]]
         
-        M = [[[0,self.Ri],[0,self.a]],
-             [[-1*self.M,self.Ri],[self.a,self.L]]]
+        Mz = [[[0,self.Riy],[0,self.a]],
+             [[-1*self.M,self.Riy],[self.a,self.L]]]
         
-        S = [[[self.c1/self.EI, 0, self.Ri/(2*self.EI)], [0,self.a]],
-             [[self.c2/self.EI, -1*self.M/self.EI, self.Ri/(2*self.EI)],[self.a,self.L]]]
+        Sz = [[[self.c1/self.EI, 0, self.Riy/(2*self.EI)], [0,self.a]],
+             [[self.c2/self.EI, -1*self.M/self.EI, self.Riy/(2*self.EI)],[self.a,self.L]]]
 
-        D = [[[self.c3/self.EI,self.c1/self.EI,0,self.Ri/(6*self.EI)],[0,self.a]],
-             [[self.c4/self.EI,self.c2/self.EI,-1*self.M/(2*self.EI),self.Ri/(6*self.EI)],[self.a,self.L]]]
+        Dy = [[[self.c3/self.EI,self.c1/self.EI,0,self.Riy/(6*self.EI)],[0,self.a]],
+             [[self.c4/self.EI,self.c2/self.EI,-1*self.M/(2*self.EI),self.Riy/(6*self.EI)],[self.a,self.L]]]
         
-        self.A = Piecewise_Polynomial()
-        self.V = Piecewise_Polynomial(V)
-        self.M = Piecewise_Polynomial(M)
-        self.S = Piecewise_Polynomial(S)
-        self.D = Piecewise_Polynomial(D)
+        self.Ax = Piecewise_Polynomial()
+        self.Dx = Piecewise_Polynomial()
+        self.Vy = Piecewise_Polynomial(Vy)
+        self.Mz = Piecewise_Polynomial(Mz)
+        self.Sz = Piecewise_Polynomial(Sz)
+        self.Dy = Piecewise_Polynomial(Dy)
     
     def integration_constants(self):
         M = self.M
@@ -285,12 +286,12 @@ class R2_Point_Moment():
         a = self.a
         L = self.L
         
-        Mi = -1*(M*(a-L)*((3*a)-L))/(L*L)
-        Mj = -1*(M*a*(3*a-2*L))/(L*L)
-        Ri = self.Ri + (Mi/L) + (Mj/L)
-        Rj = self.Rj - (Mi/L) - (Mj/L)
+        Miz = -1*(M*(a-L)*((3*a)-L))/(L*L)
+        Mjz = -1*(M*a*(3*a-2*L))/(L*L)
+        Riy = self.Riy + (Miz/L) + (Mjz/L)
+        Rjy = self.Rjy - (Miz/L) - (Mjz/L)
         
-        return [0,Ri,Mi,0,Rj,Mj]
+        return [0,Riy,Miz,0,Rjy,Mjz]
 
 class R2_Point_Load():
     
@@ -312,35 +313,36 @@ class R2_Point_Load():
         self.integration_constants()
         
         # Simple End Reactions
-        self.Ri = self.P * ((self.a-self.L)/self.L)
-        self.Rj = -1*self.P*self.a*(1/self.L)
+        self.Riy = self.P * ((self.a-self.L)/self.L)
+        self.Rjy = -1*self.P*self.a*(1/self.L)
         
         # Piecewise Functions
         # [co....cn x^n] [xa, xb]
-        V = [[[self.Ri],[0,self.a]],
-             [[self.Ri+self.P],[self.a,self.L]]]
+        Vy = [[[self.Riy],[0,self.a]],
+             [[self.Riy+self.P],[self.a,self.L]]]
         
-        M = [[[self.c1,self.Ri],[0,self.a]],
-             [[self.c2, self.Ri+self.P],[self.a,self.L]]]
+        Mz = [[[self.c1,self.Riy],[0,self.a]],
+             [[self.c2, self.Riy+self.P],[self.a,self.L]]]
         
-        S = [[[self.c3, self.c1, self.Ri/2], [0,self.a]],
-             [[self.c4, self.c2, (self.Ri+self.P)/2],[self.a,self.L]]]
+        Sz = [[[self.c3, self.c1, self.Riy/2], [0,self.a]],
+             [[self.c4, self.c2, (self.Riy+self.P)/2],[self.a,self.L]]]
 
-        D = [[[self.c5, self.c3, self.c1/2, self.Ri/6],[0,self.a]],
-             [[self.c6, self.c4, self.c2/2, (self.Ri+self.P)/6],[self.a,self.L]]]
+        Dy = [[[self.c5, self.c3, self.c1/2, self.Riy/6],[0,self.a]],
+             [[self.c6, self.c4, self.c2/2, (self.Riy+self.P)/6],[self.a,self.L]]]
         
         
-        S[0][0] = [ i/self.EI for i in S[0][0]]
-        S[1][0] =  [ i/self.EI for i in S[1][0]]
+        Sz[0][0] = [ i/self.EI for i in Sz[0][0]]
+        Sz[1][0] =  [ i/self.EI for i in Sz[1][0]]
         
-        D[0][0] = [ i/self.EI for i in D[0][0]]
-        D[1][0] =  [ i/self.EI for i in D[1][0]]
+        Dy[0][0] = [ i/self.EI for i in Dy[0][0]]
+        Dy[1][0] =  [ i/self.EI for i in Dy[1][0]]
         
-        self.A = Piecewise_Polynomial()
-        self.V = Piecewise_Polynomial(V)
-        self.M = Piecewise_Polynomial(M)
-        self.S = Piecewise_Polynomial(S)
-        self.D = Piecewise_Polynomial(D)
+        self.Ax = Piecewise_Polynomial()
+        self.Dx = Piecewise_Polynomial()
+        self.Vy = Piecewise_Polynomial(Vy)
+        self.Mz = Piecewise_Polynomial(Mz)
+        self.Sz = Piecewise_Polynomial(Sz)
+        self.Dy = Piecewise_Polynomial(Dy)
     
     def integration_constants(self):
         
@@ -361,12 +363,12 @@ class R2_Point_Load():
         a = self.a
         L = self.L
         
-        Mi = -1*(P*a*(a-L)*(a-L))/(L*L)
-        Mj = -1*(P*a*a*(a-L))/(L*L)
-        Ri = self.Ri + (Mi/L) + (Mj/L)
-        Rj = self.Rj - (Mi/L) - (Mj/L)
+        Miz = -1*(P*a*(a-L)*(a-L))/(L*L)
+        Mjz = -1*(P*a*a*(a-L))/(L*L)
+        Riy = self.Riy + (Miz/L) + (Mjz/L)
+        Rjy = self.Rjy - (Miz/L) - (Mjz/L)
         
-        return [0,Ri,Mi,0,Rj,Mj]
+        return [0,Riy,Miz,0,Rjy,Mjz]
 
 class R2_Linear_Load():
     
@@ -394,40 +396,41 @@ class R2_Linear_Load():
         self.W = 0.5*self.c*(self.w2+self.w1)
         self.cbar = ((self.w1+(2*self.w2))/(3*(self.w2+self.w1)))*self.c
         
-        self.Rj = -1*self.W*(self.a+self.cbar)*(1/self.L)
-        self.Ri = -1*self.W - self.Rj
+        self.Rjy = -1*self.W*(self.a+self.cbar)*(1/self.L)
+        self.Riy = -1*self.W - self.Rjy
         
         # Piecewise Functions
         # [co....cn x^n] [xa, xb]
-        V = [[[self.c1],[0,self.a]],
+        Vy = [[[self.c1],[0,self.a]],
             [[self.c2,self.w1+((self.a*self.w1)/self.c)-((self.a*self.w2)/self.c),(self.w2/(2*self.c))-(self.w1/(2*self.c))],[self.a,self.b]],
             [[self.c3],[self.b,self.L]]]
         
-        M = [[[self.c4,self.c1],[0,self.a]],
+        Mz = [[[self.c4,self.c1],[0,self.a]],
             [[self.c5,self.c2,(self.w1/2)+((self.a*self.w1)/(2*self.c))-((self.a*self.w2)/(2*self.c)),(self.w2/(6*self.c))-(self.w1/(6*self.c))],[self.a,self.b]],
             [[self.c6,self.c3],[self.b,self.L]]]
         
-        S = [[[self.c7,self.c4,0.5*self.c1],[0,self.a]],
+        Sz = [[[self.c7,self.c4,0.5*self.c1],[0,self.a]],
             [[self.c8,self.c5,0.5*self.c2,(self.w1/6)+((self.a*self.w1)/(6*self.c))-((self.a*self.w2)/(6*self.c)),(self.w2/(24*self.c))-(self.w1/(24*self.c))],[self.a,self.b]],
             [[self.c9,self.c6,0.5*self.c3],[self.b,self.L]]]
         
-        D = [[[self.c10,self.c7,0.5*self.c4,self.c1/6],[0,self.a]],
+        Dy = [[[self.c10,self.c7,0.5*self.c4,self.c1/6],[0,self.a]],
             [[self.c11,self.c8,0.5*self.c5,self.c2/6,(self.w1/24)+((self.a*self.w1)/(24*self.c))-((self.a*self.w2)/(24*self.c)),(self.w2/(120*self.c))-(self.w1/(120*self.c))],[self.a,self.b]],
             [[self.c12,self.c9,0.5*self.c6,self.c3/6],[self.b,self.L]]]
         
-        S[0][0] = [ i/self.EI for i in S[0][0]]
-        S[1][0] =  [ i/self.EI for i in S[1][0]]
-        S[2][0] =  [ i/self.EI for i in S[2][0]]
+        Sz[0][0] = [ i/self.EI for i in Sz[0][0]]
+        Sz[1][0] =  [ i/self.EI for i in Sz[1][0]]
+        Sz[2][0] =  [ i/self.EI for i in Sz[2][0]]
         
-        D[0][0] = [ i/self.EI for i in D[0][0]]
-        D[1][0] =  [ i/self.EI for i in D[1][0]]
-        D[2][0] =  [ i/self.EI for i in D[2][0]]
+        Dy[0][0] = [ i/self.EI for i in Dy[0][0]]
+        Dy[1][0] =  [ i/self.EI for i in Dy[1][0]]
+        Dy[2][0] =  [ i/self.EI for i in Dy[2][0]]
         
-        self.A = Piecewise_Polynomial()
-        self.V = Piecewise_Polynomial(V)
-        self.M = Piecewise_Polynomial(M)
-        self.S = Piecewise_Polynomial(S)
-        self.D = Piecewise_Polynomial(D)
+        self.Ax = Piecewise_Polynomial()
+        self.Dx = Piecewise_Polynomial()
+        self.Vy = Piecewise_Polynomial(Vy)
+        self.Mz = Piecewise_Polynomial(Mz)
+        self.Sz = Piecewise_Polynomial(Sz)
+        self.Dy = Piecewise_Polynomial(Dy)
         
     def integration_constants(self):
         
@@ -471,9 +474,150 @@ class R2_Linear_Load():
         c7 = self.c7
         c9 = self.c9
         
-        Mi = -1*(c3*L*L+2*c6*L+2*c9+4*c7)/L
-        Mj = -1*(2*c3*L*L+4*c6*L+4*c9+2*c7)/L
-        Ri = self.Ri + (Mi/L) + (Mj/L)
-        Rj = self.Rj - (Mi/L) - (Mj/L)
+        Miz = -1*(c3*L*L+2*c6*L+2*c9+4*c7)/L
+        Mjz = -1*(2*c3*L*L+4*c6*L+4*c9+2*c7)/L
+        Riy = self.Riy + (Miz/L) + (Mjz/L)
+        Rjy = self.Rjy - (Miz/L) - (Mjz/L)
         
-        return [0,Ri,Mi,0,Rj,Mj]
+        return [0,Riy,Miz,0,Rjy,Mjz]
+
+class R2_Axial_Load():
+    
+    def __init__(self, p, a, member, loadtype="D"):
+        
+        self.p = p
+        self.a = a
+        self.L = member.length
+        
+        self.E = member.material.E
+        self.A = member.section.Area
+        
+        self.EA = self.E*self.A
+        
+        self.kind = "AXIAL_POINT"
+        self.loadtype = loadtype
+        
+        # Simple End Reactions
+        
+        self.Rix = -1*self.p
+        self.Rjx = 0
+        
+        # Constants of Integration
+        self.integration_constants()
+        
+        # Piecewise Functions
+        # [co....cn x^n] [xa, xb]
+        
+        Ax = [[[-1*self.Rix],[0,self.a]],
+                [[-1*self.Rix-self.p],[self.a,self.L]]]
+        
+        Dx = [[[self.c1,-1*self.Rix],[0,self.a]],
+                [[self.c2,-1*self.Rix-self.p],[self.a,self.L]]]
+        
+        Dx[0][0] = [ i/self.EA for i in Dx[0][0]]
+        Dx[1][0] =  [ i/self.EA for i in Dx[1][0]]
+        
+        self.Ax = Piecewise_Polynomial(Ax)
+        self.Dx = Piecewise_Polynomial(Dx)
+        self.Vy = Piecewise_Polynomial()
+        self.Mz = Piecewise_Polynomial()
+        self.Sz = Piecewise_Polynomial()
+        self.Dy = Piecewise_Polynomial()
+        
+    def integration_constants(self):
+        
+        p = self.p
+        a = self.a
+        
+        self.c1 = 0
+        self.c2 = p*a
+    
+    def FEF(self):
+        
+        p = self.p
+        a = self.a
+        L = self.L
+        
+        Rix = (p*(a-L))/L
+        Rjx = (-1*p*a)/L
+    
+        return [Rix,0,0,Rjx,0,0]
+            
+class R2_Axial_Linear_Load():
+    
+    def __init__(self, w1, w2, a, b, member, loadtype="D"):
+        
+        self.w1 = w1
+        self.w2 = w2
+        self.a = a
+        self.b = b
+        self.c = b-a
+        self.L = member.length
+        
+        self.E = member.material.E
+        self.A = member.section.Area
+        
+        self.EA = self.E*self.A
+        
+        self.kind = "AXIAL_LINE"
+        self.loadtype = loadtype
+        
+        # Simple End Reactions
+        self.W = 0.5*self.c*(self.w2+self.w1)
+        
+        self.Rix = -1*self.W
+        self.Rjx = 0
+        
+        # Constants of Integration
+        self.integration_constants()
+        
+        # Piecewise Functions
+        # [co....cn x^n] [xa, xb]
+        
+        Ax = [[[-1*self.Rix],[0,self.a]],
+                [[self.c1, (self.a*self.w2-self.b*self.w1)/(self.c), -1*(self.w2-self.w1)/(2*self.c)],[self.a,self.b]],
+                [[-1*self.Rix - self.W], [self.b,self.L]]]
+        
+        Dx = [[[self.c2,-1*self.Rix],[0,self.a]],
+                [[self.c3,self.c1,((self.a*self.w2-self.b*self.w1))/(2*self.c),-1*((self.w2-self.w1))/(6*self.c)],[self.a,self.b]],
+                [[self.c4,-1*self.Rix - self.W],[self.b,self.L]]]
+        
+        Dx[0][0] = [ i/self.EA for i in Dx[0][0]]
+        Dx[1][0] =  [ i/self.EA for i in Dx[1][0]]
+        Dx[2][0] =  [ i/self.EA for i in Dx[2][0]]
+        
+        self.Ax = Piecewise_Polynomial(Ax)
+        self.Dx = Piecewise_Polynomial(Dx)
+        self.Vy = Piecewise_Polynomial()
+        self.Mz = Piecewise_Polynomial()
+        self.Sz = Piecewise_Polynomial()
+        self.Dy = Piecewise_Polynomial()
+        
+    def integration_constants(self):
+        
+        w1 = self.w1
+        w2 = self.w2
+        a = self.a
+        b = self.b
+        Ri = self.Rix
+        
+        self.c1 = -((a*a*w2-2*a*b*w1+a*a*w1+2*Ri*b-2*Ri*a)/(2*(b-a)))
+        
+        self.c2 = 0
+        
+        self.c3 = (a*a*(a*w2-3*b*w1+2*a*w1))/(6*(b-a))
+        
+        self.c4 = ((2*b*b-a*b-a*a)*w2+(b*b+a*b-2*a*a)*w1)/6
+
+    def FEF(self):
+        
+        w1 = self.w1
+        w2 = self.w2
+        a = self.a
+        b = self.b
+        L = self.L
+        
+        Rix = (((b-a)*(2*b*w2+a*w2-3*L*w2+b*w1+2*a*w1-3*L*w1))/(6*L))
+        Rjx = -1*(((b-a)*(2*b*w2+a*w2+b*w1+2*a*w1))/(6*L))
+    
+        return [Rix,0,0,Rjx,0,0]

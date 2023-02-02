@@ -397,18 +397,37 @@ N1 = R2Node(0, 0, 1)
 N2 = R2Node(10, 0, 2)
 
 M5 = Material(4176000.0)
-S5 = Section(8,0.0014853395061728396)
+S5 = Section(0.02056,0.0014853395061728396)
 
 B1 = R2Frame(N1, N2, M5, S5, 1)
 
-lineload = loads.R2_Linear_Load(-1, -0.5, 2, 8, B1)
+lineload = loads.R2_Axial_Linear_Load(-10, -5, 2, 8, B1)
+ptload = loads.R2_Axial_Load(24, 0, B1)
+ptload2 = loads.R2_Axial_Load(21, B1.length, B1)
 
-print(lineload.Ri)
-print(lineload.Rj)
+print(lineload.Rix)
+print(lineload.Rjx)
+print(ptload.Rix)
+print(ptload.Rjx)
+print(ptload2.Rix)
+print(ptload2.Rjx)
+print(lineload.Ax)
+print(lineload.Dx)
+print(ptload.Ax)
+print(ptload.Dx)
+print(ptload2.Ax)
+print(ptload2.Dx)
+print(lineload.FEF())
+print(ptload.FEF())
+print(ptload2.FEF())
 
-num_stations = 26
+
+A = ptload2.Ax.combine(ptload.Ax.combine(lineload.Ax, 1, 1),1,1)
+D = ptload2.Dx.combine(ptload.Dx.combine(lineload.Dx, 12, 12),12,1)
+
+num_stations = 100
 eta = [0+i*(1/num_stations)*B1.length for i in range(num_stations+1)]
-v = [lineload.D.evaluate(i) for i in eta]
+v = [A.evaluate(i) for i in eta]
 fig, ax = plt.subplots()
 ax.plot(eta,v, marker=".", markersize=2, color='red')
 ax.grid(True)
@@ -416,4 +435,3 @@ fig.tight_layout()
 
 plt.show()
 
-print(lineload.FEF())
