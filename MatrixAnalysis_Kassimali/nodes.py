@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 BSD 3-Clause License
 Copyright (c) 2023, Donald N. Bockoven III
 All rights reserved.
@@ -23,14 +23,14 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-'''
+"""
 
 import math
 
-class R2Node():
-    
+
+class R2Node:
     def __init__(self, x, y, uid):
-        '''
+        """
         
         Parameters
         ----------
@@ -45,55 +45,53 @@ class R2Node():
         -------
         None.
 
-        '''
-        
+        """
+
         self.uid = uid
         self.x = x
         self.y = y
-        
+
         # Restraints [Ux, Uy, Rz]
-        self.restraints_key = ["Ux","Uy", "Rz"]
-        self.restraints = [0,0,0]
-        
+        self.restraints_key = ["Ux", "Uy", "Rz"]
+        self.restraints = [0, 0, 0]
+
         # Dict of Loads by case
         self.loads = {}
-        
+
         # Dict of Displacements by case
         self.displacements = {}
-        
+
         # Dict of Reactions by case
         self.reactions = {}
-        
+
     def __str__(self):
-        
+
         str = f"Node:{self.uid}\n"
         str += f"({self.x},{self.y})\n"
-        
+
         if sum(self.restraints) != 0:
             str += "Restraints\n"
-            str += "-"*11+"\n"
-            
-            for i,r in enumerate(self.restraints):
+            str += "-" * 11 + "\n"
+
+            for i, r in enumerate(self.restraints):
                 if r != 0:
                     str += f"{self.restraints_key[i]}"
         return str
-    
+
     def x_displaced(self, loadcase, scale=1.0):
-        
-        delta = self.displacements.get(loadcase,[0,0,0])
-        
-        return self.x + (delta[0]*scale)
-    
-    
+
+        delta = self.displacements.get(loadcase, [0, 0, 0])
+
+        return self.x + (delta[0] * scale)
+
     def y_displaced(self, loadcase, scale=1.0):
-        
-        delta = self.displacements.get(loadcase,[0,0,0])
-        
-        return self.y + (delta[1]*scale)
-    
-    
+
+        delta = self.displacements.get(loadcase, [0, 0, 0])
+
+        return self.y + (delta[1] * scale)
+
     def distance(self, other):
-        '''
+        """
         
         Parameters
         ----------
@@ -105,9 +103,9 @@ class R2Node():
         distance: float
             Euclidean distance in R2
 
-        '''
-        
-        dx = (self.x-other.x)
-        dy = (self.y-other.y)
-        
-        return math.sqrt((dx*dx)+(dy*dy))
+        """
+
+        dx = self.x - other.x
+        dy = self.y - other.y
+
+        return math.sqrt((dx * dx) + (dy * dy))

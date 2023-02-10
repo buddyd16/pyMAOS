@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 BSD 3-Clause License
 Copyright (c) 2023, Donald N. Bockoven III
 All rights reserved.
@@ -23,14 +23,14 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-'''
+"""
 
-class LinearElasticMaterial():
-    
-    def __init__(self, E = 29000):
-        
-        self.E = E # Young's Modulus -- Modulus of Elasticity
-    
+
+class LinearElasticMaterial:
+    def __init__(self, E=29000):
+
+        self.E = E  # Young's Modulus -- Modulus of Elasticity
+
     def stress(self, strain):
-        
-        return self.E*strain
+
+        return self.E * strain

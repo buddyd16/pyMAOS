@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 BSD 3-Clause License
 Copyright (c) 2023, Donald N. Bockoven III
 All rights reserved.
@@ -23,12 +23,12 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-'''
+"""
 
-class Section():
-    
-    def __init__(self, Area = 10, Ixx=10):
-        
-        self.Area = Area # Cross-Section Area
-        self.Ixx = Ixx # Corss-Section centroidal Moment of Inertia
 
+class Section:
+    def __init__(self, Area=10, Ixx=10, Iyy=10):
+
+        self.Area = Area  # Cross-Section Area
+        self.Ixx = Ixx  # Cross-Section centroidal Moment of Inertia, strong
+        self.Iyy = Iyy  # Cross-Section centroidal Moment of inertia, weak
