@@ -2,7 +2,6 @@ from nodes import R2Node
 from elements import R2Truss, R2Frame
 from material import LinearElasticMaterial as Material
 from section import Section
-import loading as loads
 import R2Structure as R2Struct
 
 import matplotlib.pyplot as plt
@@ -14,104 +13,131 @@ import matplotlib.pyplot as plt
 ##                                      ##
 ##########################################
 
-
-# Material and Section
-M1 = Material(29000)
-M2 = Material(10000)
-S1 = Section(8, 2370)
-S2 = Section(12, 2370)
-S3 = Section(16, 2370)
+# Matrix Analysis of Structures, Kassimali -- Section 6.7 Computer Program
+loadcase = "D"
 
 # Nodes
 N1 = R2Node(0, 0, 1)
-N2 = R2Node(288, 0, 2)
-N3 = R2Node(576, 0, 3)
-N4 = R2Node(864, 0, 4)
-N5 = R2Node(288, 216, 5)
-N6 = R2Node(576, 216, 6)
+N2 = R2Node(0, 240, 2)
+N3 = R2Node(240, 336, 3)
+N4 = R2Node(480, 240, 4)
+N5 = R2Node(480, 0, 5)
 
-# Restraints
-# N1.restraints = [1,1,1]
-# N2.restraints = [0,0,1]
-# N3.restraints = [0,1,1]
-# N4.restraints = [0,1,1]
-# N5.restraints = [0,0,1]
-# N6.restraints = [0,0,1]
-
-N1.restraints = [1, 1, 0]
+# Node Restraints
+N1.restraints = [1, 1, 1]
 N2.restraints = [0, 0, 0]
-N3.restraints = [0, 1, 0]
-N4.restraints = [0, 1, 0]
-N5.restraints = [0, 0, 0]
-N6.restraints = [0, 0, 0]
-
-# Loading
-loadcase = "D"
-
-N2.loads[loadcase] = [0, -75, 0]
-N5.loads[loadcase] = [25, 0, 0]
-N6.loads[loadcase] = [0, -60, 0]
+N3.restraints = [0, 0, 0]
+N4.restraints = [0, 0, 0]
+N5.restraints = [1, 1, 0]
 
 # Node List
-nodes = [N1, N2, N3, N4, N5, N6]
+nodes = [N1, N2, N3, N4, N5]
 
+# Nodal Loads
+N2.loads[loadcase] = [75, 0, 0]
 
-# Elements
-# T1 = R2Truss(N1, N2, M1, S1, 1)
-# T2 = R2Truss(N2, N3, M1, S1, 2)
-# T3 = R2Truss(N3, N4, M2, S3, 3)
-# T4 = R2Truss(N5, N6, M1, S1, 4)
-# T5 = R2Truss(N2, N5, M1, S1, 5)
-# T6 = R2Truss(N3, N6, M1, S1, 6)
-# T7 = R2Truss(N1, N5, M1, S2, 7)
-# T8 = R2Truss(N2, N6, M1, S2, 8)
-# T9 = R2Truss(N3, N5, M1, S2, 9)
-# T10 = R2Truss(N4, N6, M2, S3, 10)
+# Materials
+ColMaterial = Material(29000)
+GirderMaterial = Material(10000)
 
-T1 = R2Frame(N1, N2, M1, S1, 1)
-T2 = R2Frame(N2, N3, M1, S1, 2)
-T3 = R2Frame(N3, N4, M2, S3, 3)
-T4 = R2Frame(N5, N6, M1, S1, 4)
-T5 = R2Frame(N2, N5, M1, S1, 5)
-T6 = R2Frame(N3, N6, M1, S1, 6)
-T7 = R2Frame(N1, N5, M1, S2, 7)
-T8 = R2Frame(N2, N6, M1, S2, 8)
-T9 = R2Frame(N3, N5, M1, S2, 9)
-T10 = R2Frame(N4, N6, M2, S3, 10)
+# Sections
+ColSection = Section(29.8, 2420)
+GirderSection = Section(30.6, 3100)
+
+# Members
+RF1 = R2Frame(N1, N2, ColMaterial, ColSection, 1)
+RF2 = R2Frame(N2, N3, GirderMaterial, GirderSection, 2)
+RF3 = R2Frame(N4, N3, GirderMaterial, GirderSection, 3)
+RF4 = R2Frame(N5, N4, ColMaterial, ColSection, 4)
 
 # Member List
-members = [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10]
+members = [RF1, RF2, RF3, RF4]
+
+# Member Loads
+RF2.add_distributed_load(
+    -0.25, -0.25, 0, 100, loadcase, "yy", location_percent=True
+)
+RF3.add_point_load(-20, 50, loadcase, "xx", location_percent=True)
+RF3.add_point_load(45, 50, loadcase, "yy", location_percent=True)
 
 # Create the 2D Structure
 Structure = R2Struct.R2Structure(nodes, members)
 
 Errors = Structure._ERRORS
 K = Structure.Kstructure()
-U = Structure.solve_linear_static("D")
+U = Structure.solve_linear_static(loadcase)
 
+# Kassimali Reference Values for Section 6.7
+kassimali_displacements = [
+    [0, 0, 0],
+    [3.4472, -9.1684e-3, -1.9513e-2],
+    [3.9520, -1.3152, 7.0646e-3],
+    [4.4247, -2.116e-2, -9.2708e-3],
+    [0, 0, -2.3019e-2],
+]
+
+kassimali_memberforces = [
+    [[3.3014e1, 6.7356e1, 1.3789e4], [-3.3014e1, -6.7356e1, 2.3767e3]],
+    [[1.9358e1, 2.7814e1, -2.3767e3], [-1.9358e1, 3.6808e1, 1.2142e3]],
+    [[5.9404e1, -5.8303e1, -8.0403e3], [-3.9404e1, 1.3303e1, -1.2142e3]],
+    [[7.6195e1, 3.3501e1, 1.5378e-3], [-7.6195e1, -3.3501e1, 8.0403e3]],
+]
+
+kassimali_reactions = [
+    [-6.7356e1, 3.3014e1, 1.3789e4],
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+    [-3.3501e1, 7.6195e1, 0],
+]
+
+# Print Output
+print("Errors:")
 print(Errors)
 print("Displacements:")
-for node in nodes:
-    tx = node.displacements["D"]
-    print(f"N{node.uid} -- Ux: {tx[0]:.4E}  Uy:{tx[1]:.4E}  Rz:{tx[2]:.4E}")
+for i, node in enumerate(nodes):
+    tx = node.displacements[loadcase]
+    print(
+        f"N{node.uid} -- Ux: {tx[0]:.4E} ({tx[0]-kassimali_displacements[i][0]:.2E}) -- Uy:{tx[1]:.4E} ({tx[1]-kassimali_displacements[i][1]:.2E})  -- Rz:{tx[2]:.4E} ({tx[2]-kassimali_displacements[i][2]:.2E})"
+    )
 print("-" * 100)
 print("Reactions:")
-for node in nodes:
-    rx = node.reactions["D"]
-    print(f"N{node.uid} -- Rx: {rx[0]:.4E}  Ry:{rx[1]:.4E}  Mz:{rx[2]:.4E}")
+for i, node in enumerate(nodes):
+    rx = node.reactions[loadcase]
+    print(
+        f"N{node.uid} -- Rx: {rx[0]:.4E} ({rx[0]-kassimali_reactions[i][0]:.2E}) -- Ry:{rx[1]:.4E} ({rx[1]-kassimali_reactions[i][1]:.2E}) -- Mz:{rx[2]:.4E} ({rx[2]-kassimali_reactions[i][2]:.2E})"
+    )
 print("-" * 100)
 print("Member Forces:")
-for member in members:
-    fx = member.end_forces_local["D"]
-    print(f"M{member.uid} -- Axial: {fx[0,0]:.4E}")
-# plot the structure
+for i, member in enumerate(members):
+    fx = member.end_forces_local[loadcase]
+
+    dai = fx[0, 0] - kassimali_memberforces[i][0][0]
+    dsi = fx[1, 0] - kassimali_memberforces[i][0][1]
+    dmi = fx[2, 0] - kassimali_memberforces[i][0][2]
+    daj = fx[3, 0] - kassimali_memberforces[i][1][0]
+    dsj = fx[4, 0] - kassimali_memberforces[i][1][1]
+    dmj = fx[5, 0] - kassimali_memberforces[i][1][2]
+
+    print(f"M{member.uid}")
+    print(
+        f"    i -- Axial: {fx[0,0]:.4E} ({dai:.2E}) -- Shear: {fx[1,0]:.4E} ({dsi:.2E}) -- Moment: {fx[2,0]:.4E} ({dmi:.2E})"
+    )
+    print(
+        f"    j -- Axial: {fx[3,0]:.4E} ({daj:.2E}) -- Shear: {fx[4,0]:.4E} ({dsj:.2E}) -- Moment: {fx[5,0]:.4E} ({dmj:.2E})"
+    )
+
+
+# Plot the structure
 fig, ax = plt.subplots()
+
+displace_scale = 100
 
 for node in nodes:
     ax.plot(node.x, node.y, marker=".", markersize=20, color="red")
     ax.plot(
-        node.x_displaced("D", 100),
-        node.y_displaced("D", 100),
+        node.x_displaced(loadcase, displace_scale),
+        node.y_displaced(loadcase, displace_scale),
         marker=".",
         markersize=10,
         color="gray",
@@ -124,8 +150,14 @@ for member in members:
         color="blue",
     )
     ax.plot(
-        [member.inode.x_displaced("D", 100), member.jnode.x_displaced("D", 100)],
-        [member.inode.y_displaced("D", 100), member.jnode.y_displaced("D", 100)],
+        [
+            member.inode.x_displaced(loadcase, displace_scale),
+            member.jnode.x_displaced(loadcase, displace_scale),
+        ],
+        [
+            member.inode.y_displaced(loadcase, displace_scale),
+            member.jnode.y_displaced(loadcase, displace_scale),
+        ],
         linewidth=1,
         color="gray",
     )
@@ -133,80 +165,3 @@ ax.grid(True)
 fig.tight_layout()
 
 plt.show()
-
-# Load test bed
-# N1 = R2Node(0, 0, 1)
-# N2 = R2Node(10, 0, 2)
-
-# M5 = Material(4176000.0)
-# S5 = Section(0.02056,0.0014853395061728396)
-
-# B1 = R2Frame(N1, N2, M5, S5, 1)
-
-# lineload = loads.R2_Axial_Linear_Load(-10, -5, 2, 8, B1)
-# ptload = loads.R2_Axial_Load(24, 0, B1)
-# ptload2 = loads.R2_Axial_Load(21, B1.length, B1)
-
-# print(lineload.Rix)
-# print(lineload.Rjx)
-# print(ptload.Rix)
-# print(ptload.Rjx)
-# print(ptload2.Rix)
-# print(ptload2.Rjx)
-# print(lineload.Ax)
-# print(lineload.Dx)
-# print(ptload.Ax)
-# print(ptload.Dx)
-# print(ptload2.Ax)
-# print(ptload2.Dx)
-# print(lineload.FEF())
-# print(ptload.FEF())
-# print(ptload2.FEF())
-
-
-# A = ptload2.Ax.combine(ptload.Ax.combine(lineload.Ax, 1, 1),1,1)
-# D = ptload2.Dx.combine(ptload.Dx.combine(lineload.Dx, 12, 12),12,1)
-
-# num_stations = 100
-# eta = [0+i*(1/num_stations)*B1.length for i in range(num_stations+1)]
-# v = [A.evaluate(i) for i in eta]
-# fig, ax = plt.subplots()
-# ax.plot(eta,v, marker=".", markersize=2, color='red')
-# ax.grid(True)
-# fig.tight_layout()
-
-# plt.show()
-
-
-N7 = R2Node(0, 0, 7)
-N8 = R2Node(120, 240, 8)
-N9 = R2Node(360, 240, 9)
-
-M4 = Material(29000)
-S4 = Section(11.8, 310)
-
-M11 = R2Frame(N7, N8, M4, S4, 11)
-M12 = R2Frame(N8, N9, M4, S4, 12)
-
-M11.add_point_load(-90, 50, "D", "Y", location_percent=True)
-M12.add_distributed_load(-0.125, -0.125, 0, 100, "D", "Y", location_percent=True)
-
-for load in M11.loads:
-    print(load.p)
-FEF = M11.FEF("D")
-FEFg = M11.FEFglobal("D")
-
-FEFm12 = M12.FEF("D")
-FEFgm12 = M12.FEFglobal("D")
-
-print(FEFg[0, 3:])
-print(FEFgm12[0, 0:3])
-Pf = FEFg[0, 3:] + FEFgm12[0, 0:3]
-FEFg = M11.FEFglobal("D")
-
-FEFm12 = M12.FEF("D")
-FEFgm12 = M12.FEFglobal("D")
-
-print(FEFg[0, 3:])
-print(FEFgm12[0, 0:3])
-Pf = FEFg[0, 3:] + FEFgm12[0, 0:3]

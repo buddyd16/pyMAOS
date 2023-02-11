@@ -184,7 +184,7 @@ class R2Frame:
 
     def add_point_load(self, p, a, case, direction, location_percent=False):
         """
-        
+
         Parameters
         ----------
         p : TYPE
@@ -219,23 +219,31 @@ class R2Frame:
             else:
                 pyy = -1 * s * p
                 pxx = c * p
-            self.loads.append(loadtypes.R2_Axial_Load(pxx, a, self, loadcase=case))
-            self.loads.append(loadtypes.R2_Point_Load(pyy, a, self, loadcase=case))
+            self.loads.append(
+                loadtypes.R2_Axial_Load(pxx, a, self, loadcase=case)
+            )
+            self.loads.append(
+                loadtypes.R2_Point_Load(pyy, a, self, loadcase=case)
+            )
         else:
             # Load is applied in the local member axis
 
             if direction == "xx":
 
-                self.loads.append(loadtypes.R2_Axial_Load(p, a, self, loadcase=case))
+                self.loads.append(
+                    loadtypes.R2_Axial_Load(p, a, self, loadcase=case)
+                )
             else:
 
-                self.loads.append(loadtypes.R2_Point_Load(p, a, self, loadcase=case))
+                self.loads.append(
+                    loadtypes.R2_Point_Load(p, a, self, loadcase=case)
+                )
 
     def add_distributed_load(
         self, wi, wj, a, b, case, direction, location_percent=False
     ):
         """
-        
+
         Parameters
         ----------
         wi : TYPE
@@ -280,7 +288,9 @@ class R2Frame:
                 wxxi = c * wi
                 wxxj = c * wj
             self.loads.append(
-                loadtypes.R2_Axial_Linear_Load(wxxi, wxxj, a, b, self, loadcase=case)
+                loadtypes.R2_Axial_Linear_Load(
+                    wxxi, wxxj, a, b, self, loadcase=case
+                )
             )
             self.loads.append(
                 loadtypes.R2_Linear_Load(wyyi, wyyj, a, b, self, loadcase=case)
@@ -291,7 +301,9 @@ class R2Frame:
             if direction == "xx":
 
                 self.loads.append(
-                    loadtypes.R2_Axial_Linear_Load(wi, wj, a, b, self, loadcase=case)
+                    loadtypes.R2_Axial_Linear_Load(
+                        wi, wj, a, b, self, loadcase=case
+                    )
                 )
             else:
 
@@ -301,7 +313,7 @@ class R2Frame:
 
     def add_moment_load(self, m, a, case, location_percent=False):
         """
-        
+
         Parameters
         ----------
         m : TYPE
@@ -325,7 +337,7 @@ class R2Frame:
 
     def FEF(self, case):
         """
-        
+
         Parameters
         ----------
         case : TYPE
@@ -349,16 +361,16 @@ class R2Frame:
 
     def FEFglobal(self, case):
         """
-        
+
         Parameters
         ----------
         case : TYPE
             DESCRIPTION.
+
         Returns
         -------
         TYPE
             DESCRIPTION.
-
 
         """
 
@@ -369,7 +381,7 @@ class R2Frame:
 
     def k(self):
         """
-        
+
         Returns
         -------
         k : TYPE
@@ -426,7 +438,7 @@ class R2Frame:
 
     def T(self):
         """
-        
+
         Returns
         -------
         T : TYPE
@@ -452,7 +464,7 @@ class R2Frame:
 
     def kglobal(self):
         """
-        
+
         Returns
         -------
         kglobal : TYPE
@@ -469,7 +481,7 @@ class R2Frame:
 
     def Dglobal(self, loadcase):
         """
-        
+
         Parameters
         ----------
         loadcase : TYPE
@@ -500,7 +512,7 @@ class R2Frame:
 
     def Dlocal(self, loadcase):
         """
-        
+
         Parameters
         ----------
         loadcase : TYPE
@@ -521,7 +533,7 @@ class R2Frame:
 
     def Flocal(self, loadcase):
         """
-        
+
         Parameters
         ----------
         loadcase : TYPE
@@ -534,14 +546,19 @@ class R2Frame:
         """
 
         Dlocal = self.Dlocal(loadcase)
+        Qf = np.reshape(self.FEF(loadcase), (-1, 1))
 
         FL = np.matmul(self.k(), Dlocal.T)
 
-        self.end_forces_local[loadcase] = FL
+        print(Qf)
+        print(FL)
+        print(FL + Qf)
+
+        self.end_forces_local[loadcase] = FL + Qf
 
     def Fglobal(self, loadcase):
         """
-        
+
         Parameters
         ----------
         loadcase : TYPE
@@ -555,14 +572,15 @@ class R2Frame:
         """
 
         Dglobal = self.Dglobal(loadcase)
+        Qfg = self.FEFglobal(loadcase)
 
         # global stiffness matrix
         KG = self.kglobal()
 
         FG = np.matmul(KG, Dglobal)
 
-        self.end_forces_global[loadcase] = FG
+        self.end_forces_global[loadcase] = FG + Qfg
 
         self.Flocal(loadcase)
 
-        return FG
+        return FG + Qfg

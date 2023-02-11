@@ -100,7 +100,7 @@ class R2Structure:
 
     def Kstructure(self):
         """
-        Build the structure stiffness matrix orgnized into paritioned form 
+        Build the structure stiffness matrix orgnized into paritioned form
         using the freedom map to reposition nodal DOFs
 
         Returns
@@ -135,14 +135,18 @@ class R2Structure:
                 for y in range(self.NJD):
 
                     KSTRUCT[imap[i], imap[y]] += kmglobal[i, y]
-                    KSTRUCT[imap[i + self.NJD], imap[y]] += kmglobal[i + self.NJD, y]
-                    KSTRUCT[imap[i], imap[y + self.NJD]] += kmglobal[i, y + self.NJD]
-                    KSTRUCT[imap[i + self.NJD], imap[y + self.NJD]] += kmglobal[
-                        i + self.NJD, y + self.NJD
+                    KSTRUCT[imap[i + self.NJD], imap[y]] += kmglobal[
+                        i + self.NJD, y
                     ]
+                    KSTRUCT[imap[i], imap[y + self.NJD]] += kmglobal[
+                        i, y + self.NJD
+                    ]
+                    KSTRUCT[
+                        imap[i + self.NJD], imap[y + self.NJD]
+                    ] += kmglobal[i + self.NJD, y + self.NJD]
         return KSTRUCT
 
-    def nodalforcevector(self, loadcase):
+    def nodal_force_vector(self, loadcase):
         """
         Build the structure nodal force vector mapped to the same partitions
         as KSTRUCT using the freedom map (FM).
@@ -166,6 +170,28 @@ class R2Structure:
                 FG[int(self.FM[fmindex])] += load
         return FG
 
+    def member_fixed_end_force_vector(self, loadcase):
+
+        PF = np.zeros(self.NJD * self.NJ)
+
+        for member in self.members:
+
+            if member.type != "TRUSS":
+
+                Ff = member.FEFglobal(loadcase)
+
+                fmindexi = (member.inode.uid - 1) * self.NJD
+                fmindexj = (member.jnode.uid - 1) * self.NJD
+
+                PF[int(self.FM[fmindexi])] += Ff[0, 0]
+                PF[int(self.FM[fmindexi + 1])] += Ff[0, 1]
+                PF[int(self.FM[fmindexi + 2])] += Ff[0, 2]
+                PF[int(self.FM[fmindexj])] += Ff[0, 3]
+                PF[int(self.FM[fmindexj + 1])] += Ff[0, 4]
+                PF[int(self.FM[fmindexj + 2])] += Ff[0, 5]
+
+        return PF
+
     def solve_linear_static(self, loadcase):
         """
         Perform a linear static solution of the model using the Kff
@@ -185,17 +211,22 @@ class R2Structure:
             return 0
         else:
 
-            FG = self.nodalforcevector(loadcase)
+            # Build Nodal Force Vector
+            FG = self.nodal_force_vector(loadcase)
+            # Build Member Fixed end Force vector
+            PF = self.member_fixed_end_force_vector(loadcase)
+
             # Slice out the Kff partition from the global structure stiffness
             # Matrix
-            self.Kupper = self.KSTRUCT[0 : self.NDOF, 0 : self.NDOF]
+            self.Kff = self.KSTRUCT[0 : self.NDOF, 0 : self.NDOF]
 
             # Slice out the FGf partition from the global nodal force vector
-            self.FGupper = FG[0 : self.NDOF]
+            self.FGf = FG[0 : self.NDOF]
+            self.PFf = PF[0 : self.NDOF]
 
             # Use Numpy linear Algebra solve function to solve for the
             # displacements at the free nodes.
-            U = np.linalg.solve(self.Kupper, self.FGupper)
+            U = np.linalg.solve(self.Kff, (self.FGf - self.PFf))
 
             # Full Displacement Vector
             # Result is still mapped to DOF via FM
