@@ -129,14 +129,35 @@ for i, member in enumerate(members):
 
 
 # Plot the structure
-fig, ax = plt.subplots()
+fig, axs = plt.subplots(3, 2)
 
-moment_scale = 0.008
+axial_scale = 1
+shear_scale = 1.0
+moment_scale = 0.005
+rotation_scale = 2000
 displace_scale = 10
 
+axs[0, 0].set_title(
+    f"Geometry and Deformed Shape\n scale:{displace_scale}", fontsize=12
+)
+
+axs[0, 1].set_title(f"Axial Force\n scale:{axial_scale}", fontsize=12)
+
+axs[1, 0].set_title(f"Shear Force\n scale:{shear_scale}", fontsize=12)
+
+axs[1, 1].set_title(f"Moment\n scale:{moment_scale}", fontsize=12)
+
+axs[2, 0].set_title(
+    f"Cross-Section Rotation\n scale:{rotation_scale}", fontsize=12
+)
+
 for node in nodes:
-    ax.plot(node.x, node.y, marker=".", markersize=20, color="red")
-    ax.plot(
+    axs[0, 0].plot(node.x, node.y, marker=".", markersize=8, color="red")
+    axs[0, 1].plot(node.x, node.y, marker=".", markersize=8, color="red")
+    axs[1, 0].plot(node.x, node.y, marker=".", markersize=8, color="red")
+    axs[1, 1].plot(node.x, node.y, marker=".", markersize=8, color="red")
+    axs[2, 0].plot(node.x, node.y, marker=".", markersize=8, color="red")
+    axs[0, 0].plot(
         node.x_displaced(loadcase, displace_scale),
         node.y_displaced(loadcase, displace_scale),
         marker=".",
@@ -144,29 +165,82 @@ for node in nodes:
         color="gray",
     )
 for member in members:
-    ax.plot(
+    axs[0, 0].plot(
         [member.inode.x, member.jnode.x],
         [member.inode.y, member.jnode.y],
         linewidth=1,
         color="blue",
     )
+    axs[0, 1].plot(
+        [member.inode.x, member.jnode.x],
+        [member.inode.y, member.jnode.y],
+        linewidth=1,
+        color="blue",
+    )
+    axs[1, 0].plot(
+        [member.inode.x, member.jnode.x],
+        [member.inode.y, member.jnode.y],
+        linewidth=1,
+        color="blue",
+    )
+    axs[1, 1].plot(
+        [member.inode.x, member.jnode.x],
+        [member.inode.y, member.jnode.y],
+        linewidth=1,
+        color="blue",
+    )
+    axs[2, 0].plot(
+        [member.inode.x, member.jnode.x],
+        [member.inode.y, member.jnode.y],
+        linewidth=1,
+        color="blue",
+    )
+    aglobal = member.Aglobal_plot(loadcase, axial_scale)
+    vglobal = member.Vglobal_plot(loadcase, shear_scale)
     mglobal = member.Mglobal_plot(loadcase, moment_scale)
-    dglobal = member.dglobal_plot(loadcase, displace_scale)
+    sglobal = member.Sglobal_plot(loadcase, rotation_scale)
+    dglobal = member.Dglobal_plot(loadcase, displace_scale)
 
-    ax.plot(
+    axs[0, 1].plot(
+        (aglobal[:, 0] + member.inode.x),
+        (aglobal[:, 1] + member.inode.y),
+        linewidth=1,
+        color="blue",
+    )
+
+    axs[1, 0].plot(
+        (vglobal[:, 0] + member.inode.x),
+        (vglobal[:, 1] + member.inode.y),
+        linewidth=1,
+        color="green",
+    )
+
+    axs[1, 1].plot(
         (mglobal[:, 0] + member.inode.x),
         (mglobal[:, 1] + member.inode.y),
         linewidth=1,
         color="red",
     )
 
-    ax.plot(
+    axs[0, 0].plot(
         (dglobal[:, 0] + member.inode.x),
         (dglobal[:, 1] + member.inode.y),
         linewidth=1,
         color="gray",
     )
-ax.grid(True)
+
+    axs[2, 0].plot(
+        (sglobal[:, 0] + member.inode.x),
+        (sglobal[:, 1] + member.inode.y),
+        linewidth=1,
+        color="purple",
+    )
+
+axs[0, 0].grid(True)
+axs[0, 1].grid(True)
+axs[1, 0].grid(True)
+axs[1, 1].grid(True)
+axs[2, 0].grid(True)
 fig.tight_layout()
 
 plt.show()

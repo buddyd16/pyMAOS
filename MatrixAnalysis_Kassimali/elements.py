@@ -643,7 +643,7 @@ class R2Frame:
 
         self._stations = True
 
-    def dlocal_plot(self, combo, scale=1):
+    def Dlocal_plot(self, combo, scale=1):
 
         if not self._stations:
             self.stations()
@@ -704,9 +704,9 @@ class R2Frame:
 
         return dlocal_span
 
-    def dglobal_plot(self, combo, scale=1):
+    def Dglobal_plot(self, combo, scale=1):
 
-        dlocal_plot = self.dlocal_plot(combo, scale=scale)
+        dlocal_plot = self.Dlocal_plot(combo, scale=scale)
 
         c = (self.jnode.x - self.inode.x) / self.length
         s = (self.jnode.y - self.inode.y) / self.length
@@ -716,6 +716,125 @@ class R2Frame:
         dglobal_plot = np.matmul(dlocal_plot, R)
 
         return dglobal_plot
+
+    def Alocal_plot(self, combo, scale=1):
+        if not self._stations:
+            self.stations()
+
+        empty_f = np.zeros((6, 1))
+
+        Fendlocal = self.end_forces_local.get(combo, empty_f)
+
+        # Empty Piecwise functions to build the total function from the loading
+        ax = loadtypes.Piecewise_Polynomial()
+
+        # Create "loads" from the end forces and combine with dx and dy
+        fxi = loadtypes.R2_Axial_Load(Fendlocal[0, 0], 0, self)
+        fyi = loadtypes.R2_Point_Load(Fendlocal[1, 0], 0, self)
+        mzi = loadtypes.R2_Point_Moment(Fendlocal[2, 0], 0, self)
+        fxj = loadtypes.R2_Axial_Load(Fendlocal[3, 0], self.length, self)
+        fyj = loadtypes.R2_Point_Load(Fendlocal[4, 0], self.length, self)
+        mzj = loadtypes.R2_Point_Moment(Fendlocal[5, 0], self.length, self)
+
+        ax = ax.combine(fxi.Ax, 1, 1)
+        ax = ax.combine(fyi.Ax, 1, 1)
+        ax = ax.combine(mzi.Ax, 1, 1)
+        ax = ax.combine(fxj.Ax, 1, 1)
+        ax = ax.combine(fyj.Ax, 1, 1)
+        ax = ax.combine(mzj.Ax, 1, 1)
+
+        # Combine Piecewise Deflection Functions of all of the loads
+        if self._loaded:
+
+            for load in self.loads:
+
+                if load.loadcase == combo:
+
+                    ax = ax.combine(load.Ax, 1, 1)
+
+        axlocal_span = np.zeros((len(self.calcstations), 2))
+
+        for i, x in enumerate(self.calcstations):
+
+            a = ax.evaluate(x)
+
+            axlocal_span[i, 0] = x
+            axlocal_span[i, 1] = a * scale
+
+        return axlocal_span
+
+    def Aglobal_plot(self, combo, scale):
+
+        axlocal_plot = self.Alocal_plot(combo, scale=scale)
+
+        c = (self.jnode.x - self.inode.x) / self.length
+        s = (self.jnode.y - self.inode.y) / self.length
+
+        R = np.matrix([[c, s], [-s, c]])
+
+        axglobal_plot = np.matmul(axlocal_plot, R)
+
+        return axglobal_plot
+
+    def Vlocal_plot(self, combo, scale=1):
+
+        if not self._stations:
+            self.stations()
+
+        empty_f = np.zeros((6, 1))
+
+        Fendlocal = self.end_forces_local.get(combo, empty_f)
+
+        # Empty Piecwise functions to build the total function from the loading
+        vy = loadtypes.Piecewise_Polynomial()
+
+        # Create "loads" from the end forces and combine with dx and dy
+        fxi = loadtypes.R2_Axial_Load(Fendlocal[0, 0], 0, self)
+        fyi = loadtypes.R2_Point_Load(Fendlocal[1, 0], 0, self)
+        mzi = loadtypes.R2_Point_Moment(Fendlocal[2, 0], 0, self)
+        fxj = loadtypes.R2_Axial_Load(Fendlocal[3, 0], self.length, self)
+        fyj = loadtypes.R2_Point_Load(Fendlocal[4, 0], self.length, self)
+        mzj = loadtypes.R2_Point_Moment(Fendlocal[5, 0], self.length, self)
+
+        vy = vy.combine(fxi.Vy, 1, 1)
+        vy = vy.combine(fyi.Vy, 1, 1)
+        vy = vy.combine(mzi.Vy, 1, 1)
+        vy = vy.combine(fxj.Vy, 1, 1)
+        vy = vy.combine(fyj.Vy, 1, 1)
+        vy = vy.combine(mzj.Vy, 1, 1)
+
+        # Combine Piecewise Deflection Functions of all of the loads
+        if self._loaded:
+
+            for load in self.loads:
+
+                if load.loadcase == combo:
+
+                    vy = vy.combine(load.Vy, 1, 1)
+
+        vlocal_span = np.zeros((len(self.calcstations), 2))
+
+        for i, x in enumerate(self.calcstations):
+
+            v = vy.evaluate(x)
+
+            vlocal_span[i, 0] = x
+            vlocal_span[i, 1] = v * scale
+
+        return vlocal_span
+
+    def Vglobal_plot(self, combo, scale):
+
+        vlocal_plot = self.Vlocal_plot(combo, scale=scale)
+
+        c = (self.jnode.x - self.inode.x) / self.length
+        s = (self.jnode.y - self.inode.y) / self.length
+
+        R = np.matrix([[c, s], [-s, c]])
+
+        vglobal_plot = np.matmul(vlocal_plot, R)
+
+        return vglobal_plot
 
     def Mlocal_plot(self, combo, scale=1):
 
@@ -776,3 +895,67 @@ class R2Frame:
         mglobal_plot = np.matmul(mlocal_plot, R)
 
         return mglobal_plot
+
+    def Slocal_plot(self, combo, scale=1):
+
+        if not self._stations:
+            self.stations()
+
+        empty_f = np.zeros((6, 1))
+
+        Fendlocal = self.end_forces_local.get(combo, empty_f)
+
+        # Empty Piecwise functions to build the total function from the loading
+        Szx = loadtypes.Piecewise_Polynomial()
+
+        # Create "loads" from the end forces and combine with dx and dy
+        fxi = loadtypes.R2_Axial_Load(Fendlocal[0, 0], 0, self)
+        fyi = loadtypes.R2_Point_Load(Fendlocal[1, 0], 0, self)
+        mzi = loadtypes.R2_Point_Moment(Fendlocal[2, 0], 0, self)
+        fxj = loadtypes.R2_Axial_Load(Fendlocal[3, 0], self.length, self)
+        fyj = loadtypes.R2_Point_Load(Fendlocal[4, 0], self.length, self)
+        mzj = loadtypes.R2_Point_Moment(Fendlocal[5, 0], self.length, self)
+
+        Szx = Szx.combine(fxi.Sz, 1, 1)
+        Szx = Szx.combine(fyi.Sz, 1, 1)
+        Szx = Szx.combine(mzi.Sz, 1, 1)
+        Szx = Szx.combine(fxj.Sz, 1, 1)
+        Szx = Szx.combine(fyj.Sz, 1, 1)
+        Szx = Szx.combine(mzj.Sz, 1, 1)
+
+        # Combine Piecewise Deflection Functions of all of the loads
+        if self._loaded:
+
+            for load in self.loads:
+
+                if load.loadcase == combo:
+
+                    Szx = Szx.combine(load.Sz, 1, 1)
+
+        slocal_span = np.zeros((len(self.calcstations), 2))
+        # slope adjustment for end displacements
+        Dlocal = self.Dlocal(combo)
+
+        sadjust = (Dlocal[0, 4] - Dlocal[0, 1]) / self.length
+        print(sadjust)
+        for i, x in enumerate(self.calcstations):
+
+            s = Szx.evaluate(x)
+
+            slocal_span[i, 0] = x
+            slocal_span[i, 1] = (s + sadjust) * scale
+
+        return slocal_span
+
+    def Sglobal_plot(self, combo, scale):
+
+        slocal_plot = self.Slocal_plot(combo, scale=scale)
+
+        c = (self.jnode.x - self.inode.x) / self.length
+        s = (self.jnode.y - self.inode.y) / self.length
+
+        R = np.matrix([[c, s], [-s, c]])
+
+        sglobal_plot = np.matmul(slocal_plot, R)
+
+        return sglobal_plot
