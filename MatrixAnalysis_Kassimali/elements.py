@@ -102,12 +102,12 @@ class R2Truss:
 
         return kglobal
 
-    def Dglobal(self, loadcase):
+    def Dglobal(self, combo):
         # Gloabl nodal displacement vector
         D = np.zeros(6)
 
-        iD = self.inode.displacements[loadcase]
-        jD = self.jnode.displacements[loadcase]
+        iD = self.inode.displacements[combo]
+        jD = self.jnode.displacements[combo]
 
         # Populate Displacement Vector
         D[0] = iD[0]
@@ -119,34 +119,34 @@ class R2Truss:
 
         return D
 
-    def Dlocal(self, loadcase):
+    def Dlocal(self, combo):
 
-        Dglobal = self.Dglobal(loadcase)
+        Dglobal = self.Dglobal(combo)
 
         Dlocal = np.matmul(self.T(), Dglobal)
 
         return Dlocal
 
-    def Flocal(self, loadcase):
+    def Flocal(self, combo):
 
-        Dlocal = self.Dlocal(loadcase)
+        Dlocal = self.Dlocal(combo)
 
         FL = np.matmul(self.k(), Dlocal.T)
 
-        self.end_forces_local[loadcase] = FL
+        self.end_forces_local[combo] = FL
 
-    def Fglobal(self, loadcase):
+    def Fglobal(self, combo):
 
-        Dglobal = self.Dglobal(loadcase)
+        Dglobal = self.Dglobal(combo)
 
         # global stiffness matrix
         KG = self.kglobal()
 
         FG = np.matmul(KG, Dglobal)
 
-        self.end_forces_global[loadcase] = FG
+        self.end_forces_global[combo] = FG
 
-        self.Flocal(loadcase)
+        self.Flocal(combo)
 
         return FG
 
@@ -171,6 +171,10 @@ class R2Frame:
         self.end_forces_global = {}
 
         self.fixed_end_forces = {}
+
+        # Flags
+        self._stations = False
+        self._loaded = False
 
     @property
     def length(self):
@@ -238,6 +242,9 @@ class R2Frame:
                 self.loads.append(
                     loadtypes.R2_Point_Load(p, a, self, loadcase=case)
                 )
+
+        self._stations = False
+        self._loaded = True
 
     def add_distributed_load(
         self, wi, wj, a, b, case, direction, location_percent=False
@@ -311,6 +318,9 @@ class R2Frame:
                     loadtypes.R2_Linear_Load(wi, wj, a, b, self, loadcase=case)
                 )
 
+        self._stations = False
+        self._loaded = True
+
     def add_moment_load(self, m, a, case, location_percent=False):
         """
 
@@ -334,6 +344,9 @@ class R2Frame:
         if location_percent:
             a = (a / 100) * self.length
         self.loads.append(loadtypes.R2_Point_Moment(m, a, self, loadcase=case))
+
+        self._stations = False
+        self._loaded = True
 
     def FEF(self, case):
         """
@@ -479,12 +492,12 @@ class R2Frame:
 
         return kglobal
 
-    def Dglobal(self, loadcase):
+    def Dglobal(self, combo):
         """
 
         Parameters
         ----------
-        loadcase : TYPE
+        combo : TYPE
             DESCRIPTION.
 
         Returns
@@ -497,8 +510,8 @@ class R2Frame:
         # Gloabl nodal displacement vector
         D = np.zeros(6)
 
-        iD = self.inode.displacements[loadcase]
-        jD = self.jnode.displacements[loadcase]
+        iD = self.inode.displacements[combo]
+        jD = self.jnode.displacements[combo]
 
         # Populate Displacement Vector
         D[0] = iD[0]
@@ -510,12 +523,12 @@ class R2Frame:
 
         return D
 
-    def Dlocal(self, loadcase):
+    def Dlocal(self, combo):
         """
 
         Parameters
         ----------
-        loadcase : TYPE
+        combo : TYPE
             DESCRIPTION.
 
         Returns
@@ -525,18 +538,18 @@ class R2Frame:
 
         """
 
-        Dglobal = self.Dglobal(loadcase)
+        Dglobal = self.Dglobal(combo)
 
         Dlocal = np.matmul(self.T(), Dglobal)
 
         return Dlocal
 
-    def Flocal(self, loadcase):
+    def Flocal(self, combo):
         """
 
         Parameters
         ----------
-        loadcase : TYPE
+        combo : TYPE
             DESCRIPTION.
 
         Returns
@@ -545,23 +558,19 @@ class R2Frame:
 
         """
 
-        Dlocal = self.Dlocal(loadcase)
-        Qf = np.reshape(self.FEF(loadcase), (-1, 1))
+        Dlocal = self.Dlocal(combo)
+        Qf = np.reshape(self.FEF(combo), (-1, 1))
 
         FL = np.matmul(self.k(), Dlocal.T)
 
-        print(Qf)
-        print(FL)
-        print(FL + Qf)
+        self.end_forces_local[combo] = FL + Qf
 
-        self.end_forces_local[loadcase] = FL + Qf
-
-    def Fglobal(self, loadcase):
+    def Fglobal(self, combo):
         """
 
         Parameters
         ----------
-        loadcase : TYPE
+        combo : TYPE
             DESCRIPTION.
 
         Returns
@@ -571,16 +580,199 @@ class R2Frame:
 
         """
 
-        Dglobal = self.Dglobal(loadcase)
-        Qfg = self.FEFglobal(loadcase)
+        Dglobal = self.Dglobal(combo)
+        Qfg = self.FEFglobal(combo)
 
         # global stiffness matrix
         KG = self.kglobal()
 
         FG = np.matmul(KG, Dglobal)
 
-        self.end_forces_global[loadcase] = FG + Qfg
+        self.end_forces_global[combo] = FG + Qfg
 
-        self.Flocal(loadcase)
+        self.Flocal(combo)
 
         return FG + Qfg
+
+    def stations(self, num_stations=10):
+
+        """
+        define general computation points along the beam length for shear,
+        moment, slope, and deflection plots
+        """
+
+        # parametric list of stations between 0 and 1'
+        eta = [0 + i * (1 / num_stations) for i in range(num_stations + 1)]
+
+        stations = [self.length * i for i in eta]
+
+        if self._loaded:
+            extra_stations = []
+
+            for load in self.loads:
+                if (
+                    load.kind == "POINT"
+                    or load.kind == "MOMENT"
+                    or load.kind == "AXIAL_POINT"
+                ):
+                    b = min(self.length, load.a + 0.001)
+                    c = max(0, load.a - 0.001)
+                    extra_stations.extend([c, load.a, b])
+
+                elif load.kind == "LINE" or load.kind == "AXIAL_LINE":
+                    c = min(self.length, load.b + 0.001)
+                    d = max(0, load.a - 0.001)
+                    extra_stations.extend([d, load.a, load.b, c])
+                else:
+                    pass
+
+            stations.extend(extra_stations)
+
+        stations.sort()
+
+        # Make sure the first and last stations do not exceed the beam
+
+        if stations[0] < 0:
+            stations[0] = 0
+
+        if stations[-1] > self.length:
+            stations[-1] = self.length
+
+        # Remove duplicate locations
+        self.calcstations = sorted(set(stations))
+
+        self._stations = True
+
+    def dlocal_plot(self, combo, scale=1):
+
+        if not self._stations:
+            self.stations()
+
+        Dlocal = self.Dlocal(combo)
+
+        # Parametric Functions defining a linear relationship for deflection
+        # in each axis based on the Ux and Uy nodal displacements
+        Dx = lambda x: Dlocal[0, 0] + (x / self.length) * (
+            Dlocal[0, 3] - Dlocal[0, 0]
+        )
+        Dy = lambda x: Dlocal[0, 1] + (x / self.length) * (
+            Dlocal[0, 4] - Dlocal[0, 1]
+        )
+
+        empty_f = np.zeros((6, 1))
+
+        Fendlocal = self.end_forces_local.get(combo, empty_f)
+
+        # Empty Piecwise functions to build the total function from the loading
+        dx = loadtypes.Piecewise_Polynomial()
+        dy = loadtypes.Piecewise_Polynomial()
+
+        # Create "loads" from the end forces and combine with dx and dy
+        fxi = loadtypes.R2_Axial_Load(Fendlocal[0, 0], 0, self)
+        fyi = loadtypes.R2_Point_Load(Fendlocal[1, 0], 0, self)
+        mzi = loadtypes.R2_Point_Moment(Fendlocal[2, 0], 0, self)
+        fxj = loadtypes.R2_Axial_Load(Fendlocal[3, 0], self.length, self)
+        fyj = loadtypes.R2_Point_Load(Fendlocal[4, 0], self.length, self)
+        mzj = loadtypes.R2_Point_Moment(Fendlocal[5, 0], self.length, self)
+
+        dx = dx.combine(fxi.Dx, 1, 1)
+        dy = dy.combine(fyi.Dy, 1, 1)
+        dy = dy.combine(mzi.Dy, 1, 1)
+        dx = dx.combine(fxj.Dx, 1, 1)
+        dy = dy.combine(fyj.Dy, 1, 1)
+        dy = dy.combine(mzj.Dy, 1, 1)
+
+        # Combine Piecewise Deflection Functions of all of the loads
+        if self._loaded:
+
+            for load in self.loads:
+
+                if load.loadcase == combo:
+
+                    dx = dx.combine(load.Dx, 1, 1)
+                    dy = dy.combine(load.Dy, 1, 1)
+
+        dlocal_span = np.zeros((len(self.calcstations), 2))
+
+        for i, x in enumerate(self.calcstations):
+
+            dxl = dx.evaluate(x) + Dx(x)
+            dyl = dy.evaluate(x) + Dy(x)
+
+            dlocal_span[i, 0] = x + (dxl * scale)
+            dlocal_span[i, 1] = dyl * scale
+
+        return dlocal_span
+
+    def dglobal_plot(self, combo, scale=1):
+
+        dlocal_plot = self.dlocal_plot(combo, scale=scale)
+
+        c = (self.jnode.x - self.inode.x) / self.length
+        s = (self.jnode.y - self.inode.y) / self.length
+
+        R = np.matrix([[c, s], [-s, c]])
+
+        dglobal_plot = np.matmul(dlocal_plot, R)
+
+        return dglobal_plot
+
+    def Mlocal_plot(self, combo, scale=1):
+
+        if not self._stations:
+            self.stations()
+
+        empty_f = np.zeros((6, 1))
+
+        Fendlocal = self.end_forces_local.get(combo, empty_f)
+
+        # Empty Piecwise functions to build the total function from the loading
+        Mzx = loadtypes.Piecewise_Polynomial()
+
+        # Create "loads" from the end forces and combine with dx and dy
+        fxi = loadtypes.R2_Axial_Load(Fendlocal[0, 0], 0, self)
+        fyi = loadtypes.R2_Point_Load(Fendlocal[1, 0], 0, self)
+        mzi = loadtypes.R2_Point_Moment(Fendlocal[2, 0], 0, self)
+        fxj = loadtypes.R2_Axial_Load(Fendlocal[3, 0], self.length, self)
+        fyj = loadtypes.R2_Point_Load(Fendlocal[4, 0], self.length, self)
+        mzj = loadtypes.R2_Point_Moment(Fendlocal[5, 0], self.length, self)
+
+        Mzx = Mzx.combine(fxi.Mz, 1, 1)
+        Mzx = Mzx.combine(fyi.Mz, 1, 1)
+        Mzx = Mzx.combine(mzi.Mz, 1, 1)
+        Mzx = Mzx.combine(fxj.Mz, 1, 1)
+        Mzx = Mzx.combine(fyj.Mz, 1, 1)
+        Mzx = Mzx.combine(mzj.Mz, 1, 1)
+
+        # Combine Piecewise Deflection Functions of all of the loads
+        if self._loaded:
+
+            for load in self.loads:
+
+                if load.loadcase == combo:
+
+                    Mzx = Mzx.combine(load.Mz, 1, 1)
+
+        mlocal_span = np.zeros((len(self.calcstations), 2))
+
+        for i, x in enumerate(self.calcstations):
+
+            m = Mzx.evaluate(x)
+
+            mlocal_span[i, 0] = x
+            mlocal_span[i, 1] = m * scale
+
+        return mlocal_span
+
+    def Mglobal_plot(self, combo, scale):
+
+        mlocal_plot = self.Mlocal_plot(combo, scale=scale)
+
+        c = (self.jnode.x - self.inode.x) / self.length
+        s = (self.jnode.y - self.inode.y) / self.length
+
+        R = np.matrix([[c, s], [-s, c]])
+
+        mglobal_plot = np.matmul(mlocal_plot, R)
+
+        return mglobal_plot

@@ -131,7 +131,8 @@ for i, member in enumerate(members):
 # Plot the structure
 fig, ax = plt.subplots()
 
-displace_scale = 100
+moment_scale = 0.008
+displace_scale = 10
 
 for node in nodes:
     ax.plot(node.x, node.y, marker=".", markersize=20, color="red")
@@ -149,15 +150,19 @@ for member in members:
         linewidth=1,
         color="blue",
     )
+    mglobal = member.Mglobal_plot(loadcase, moment_scale)
+    dglobal = member.dglobal_plot(loadcase, displace_scale)
+
     ax.plot(
-        [
-            member.inode.x_displaced(loadcase, displace_scale),
-            member.jnode.x_displaced(loadcase, displace_scale),
-        ],
-        [
-            member.inode.y_displaced(loadcase, displace_scale),
-            member.jnode.y_displaced(loadcase, displace_scale),
-        ],
+        (mglobal[:, 0] + member.inode.x),
+        (mglobal[:, 1] + member.inode.y),
+        linewidth=1,
+        color="red",
+    )
+
+    ax.plot(
+        (dglobal[:, 0] + member.inode.x),
+        (dglobal[:, 1] + member.inode.y),
         linewidth=1,
         color="gray",
     )
