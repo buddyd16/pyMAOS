@@ -57,6 +57,8 @@ RF6 = R2Frame(N7, N8, BeamMaterial, BeamSection, 6)
 # Member List
 members = [RF1, RF2, RF3, RF4, RF5, RF6]
 
+# Member Release
+
 # Member Loads
 
 # Create the 2D Structure
@@ -209,6 +211,12 @@ axs[0, 1].grid(True)
 axs[1, 0].grid(True)
 axs[1, 1].grid(True)
 axs[2, 0].grid(True)
+axs[0, 0].set_aspect("scaled")
+axs[0, 1].set_aspect("scaled")
+axs[1, 0].set_aspect("scaled")
+axs[1, 1].set_aspect("scaled")
+axs[2, 0].set_aspect("scaled")
+
 fig.tight_layout()
 
 plt.show()

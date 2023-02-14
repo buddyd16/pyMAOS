@@ -172,6 +172,8 @@ class R2Frame:
 
         self.fixed_end_forces = {}
 
+        self.hinges = [0, 0]
+
         # Flags
         self._stations = False
         self._loaded = False
@@ -185,6 +187,19 @@ class R2Frame:
         self._length = self.inode.distance(self.jnode)
 
         return self._length
+
+    def hinge_i(self):
+
+        self.hinges[0] = 1
+
+    def hinge_j(self):
+        self.hinges[1] = 1
+
+    def fix_i(self):
+        self.hinges[0] = 0
+
+    def fix_j(self):
+        self.hinges[1] = 0
 
     def add_point_load(self, p, a, case, direction, location_percent=False):
         """
@@ -370,6 +385,45 @@ class R2Frame:
             if load.loadcase == case:
                 loadfef = np.array(load.FEF())
                 fef = fef + loadfef
+
+        print(fef)
+
+        if self.hinges == [1, 0]:
+
+            Mi = fef[2]
+            L = self.length
+
+            fef[1] = fef[1] - ((3 / (2 * L)) * Mi)
+            fef[2] = 0
+            fef[4] = fef[4] + ((3 / (2 * L)) * Mi)
+            fef[5] = fef[5] - (Mi / 2)
+
+        elif self.hinges == [0, 1]:
+
+            Mj = fef[5]
+            L = self.length
+
+            fef[1] = fef[1] - ((3 / (2 * L)) * Mj)
+            fef[2] = fef[2] - (Mj / 2)
+            fef[4] = fef[4] + ((3 / (2 * L)) * Mj)
+            fef[5] = 0
+
+        elif self.hinges == [1, 1]:
+
+            Mi = fef[2]
+            Mj = fef[5]
+            L = self.length
+
+            fef[1] = fef[1] - ((Mj + Mi) / L)
+            fef[2] = 0
+            fef[4] = fef[4] + ((Mj + Mi) / L)
+            fef[5] = 0
+
+        else:
+            pass
+
+        print(fef)
+
         return fef
 
     def FEFglobal(self, case):
@@ -408,44 +462,162 @@ class R2Frame:
         A = self.section.Area
         L = self.length
 
-        k = np.matrix(
-            [
-                [A * E / L, 0, 0, -1 * A * E / L, 0, 0],
+        if self.hinges == [1, 0]:
+            k = np.matrix(
                 [
-                    0,
-                    (12 * E * Ixx) / (L * L * L),
-                    (6 * E * Ixx) / (L * L),
-                    0,
-                    (-12 * E * Ixx) / (L * L * L),
-                    (6 * E * Ixx) / (L * L),
-                ],
+                    [A * E / L, 0, 0, -1 * A * E / L, 0, 0],
+                    [
+                        0,
+                        (3 * E * Ixx) / (L * L * L),
+                        0,
+                        0,
+                        (-3 * E * Ixx) / (L * L * L),
+                        (3 * E * Ixx) / (L * L),
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ],
+                    [-A * E / L, 0, 0, A * E / L, 0, 0],
+                    [
+                        0,
+                        (-3 * E * Ixx) / (L * L * L),
+                        0,
+                        0,
+                        (3 * E * Ixx) / (L * L * L),
+                        (-3 * E * Ixx) / (L * L),
+                    ],
+                    [
+                        0,
+                        (3 * E * Ixx) / (L * L),
+                        0,
+                        0,
+                        (-3 * E * Ixx) / (L * L),
+                        (3 * E * Ixx) / L,
+                    ],
+                ]
+            )
+        elif self.hinges == [0, 1]:
+            k = np.matrix(
                 [
-                    0,
-                    (6 * E * Ixx) / (L * L),
-                    (4 * E * Ixx) / L,
-                    0,
-                    (-6 * E * Ixx) / (L * L),
-                    (2 * E * Ixx) / L,
-                ],
-                [-A * E / L, 0, 0, A * E / L, 0, 0],
+                    [A * E / L, 0, 0, -1 * A * E / L, 0, 0],
+                    [
+                        0,
+                        (3 * E * Ixx) / (L * L * L),
+                        (3 * E * Ixx) / (L * L),
+                        0,
+                        (-3 * E * Ixx) / (L * L * L),
+                        0,
+                    ],
+                    [
+                        0,
+                        (3 * E * Ixx) / (L * L),
+                        (3 * E * Ixx) / L,
+                        0,
+                        (-3 * E * Ixx) / (L * L),
+                        0,
+                    ],
+                    [-A * E / L, 0, 0, A * E / L, 0, 0],
+                    [
+                        0,
+                        (-3 * E * Ixx) / (L * L * L),
+                        (-3 * E * Ixx) / (L * L),
+                        0,
+                        (3 * E * Ixx) / (L * L * L),
+                        0,
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ],
+                ]
+            )
+        elif self.hinges == [1, 1]:
+            k = np.matrix(
                 [
-                    0,
-                    (-12 * E * Ixx) / (L * L * L),
-                    (-6 * E * Ixx) / (L * L),
-                    0,
-                    (12 * E * Ixx) / (L * L * L),
-                    (-6 * E * Ixx) / (L * L),
-                ],
+                    [A * E / L, 0, 0, -1 * A * E / L, 0, 0],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ],
+                    [-A * E / L, 0, 0, A * E / L, 0, 0],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ],
+                ]
+            )
+        else:
+            k = np.matrix(
                 [
-                    0,
-                    (6 * E * Ixx) / (L * L),
-                    (2 * E * Ixx) / L,
-                    0,
-                    (-6 * E * Ixx) / (L * L),
-                    (4 * E * Ixx) / L,
-                ],
-            ]
-        )
+                    [A * E / L, 0, 0, -1 * A * E / L, 0, 0],
+                    [
+                        0,
+                        (12 * E * Ixx) / (L * L * L),
+                        (6 * E * Ixx) / (L * L),
+                        0,
+                        (-12 * E * Ixx) / (L * L * L),
+                        (6 * E * Ixx) / (L * L),
+                    ],
+                    [
+                        0,
+                        (6 * E * Ixx) / (L * L),
+                        (4 * E * Ixx) / L,
+                        0,
+                        (-6 * E * Ixx) / (L * L),
+                        (2 * E * Ixx) / L,
+                    ],
+                    [-A * E / L, 0, 0, A * E / L, 0, 0],
+                    [
+                        0,
+                        (-12 * E * Ixx) / (L * L * L),
+                        (-6 * E * Ixx) / (L * L),
+                        0,
+                        (12 * E * Ixx) / (L * L * L),
+                        (-6 * E * Ixx) / (L * L),
+                    ],
+                    [
+                        0,
+                        (6 * E * Ixx) / (L * L),
+                        (2 * E * Ixx) / L,
+                        0,
+                        (-6 * E * Ixx) / (L * L),
+                        (4 * E * Ixx) / L,
+                    ],
+                ]
+            )
 
         return k
 
@@ -642,80 +814,6 @@ class R2Frame:
         self.calcstations = sorted(set(stations))
 
         self._stations = True
-
-    def Dlocal_plot(self, combo, scale=1):
-
-        if not self._stations:
-            self.stations()
-
-        Dlocal = self.Dlocal(combo)
-
-        # Parametric Functions defining a linear relationship for deflection
-        # in each axis based on the Ux and Uy nodal displacements
-        Dx = lambda x: Dlocal[0, 0] + (x / self.length) * (
-            Dlocal[0, 3] - Dlocal[0, 0]
-        )
-        Dy = lambda x: Dlocal[0, 1] + (x / self.length) * (
-            Dlocal[0, 4] - Dlocal[0, 1]
-        )
-
-        empty_f = np.zeros((6, 1))
-
-        Fendlocal = self.end_forces_local.get(combo, empty_f)
-
-        # Empty Piecwise functions to build the total function from the loading
-        dx = loadtypes.Piecewise_Polynomial()
-        dy = loadtypes.Piecewise_Polynomial()
-
-        # Create "loads" from the end forces and combine with dx and dy
-        fxi = loadtypes.R2_Axial_Load(Fendlocal[0, 0], 0, self)
-        fyi = loadtypes.R2_Point_Load(Fendlocal[1, 0], 0, self)
-        mzi = loadtypes.R2_Point_Moment(Fendlocal[2, 0], 0, self)
-        fxj = loadtypes.R2_Axial_Load(Fendlocal[3, 0], self.length, self)
-        fyj = loadtypes.R2_Point_Load(Fendlocal[4, 0], self.length, self)
-        mzj = loadtypes.R2_Point_Moment(Fendlocal[5, 0], self.length, self)
-
-        dx = dx.combine(fxi.Dx, 1, 1)
-        dy = dy.combine(fyi.Dy, 1, 1)
-        dy = dy.combine(mzi.Dy, 1, 1)
-        dx = dx.combine(fxj.Dx, 1, 1)
-        dy = dy.combine(fyj.Dy, 1, 1)
-        dy = dy.combine(mzj.Dy, 1, 1)
-
-        # Combine Piecewise Deflection Functions of all of the loads
-        if self._loaded:
-
-            for load in self.loads:
-
-                if load.loadcase == combo:
-
-                    dx = dx.combine(load.Dx, 1, 1)
-                    dy = dy.combine(load.Dy, 1, 1)
-
-        dlocal_span = np.zeros((len(self.calcstations), 2))
-
-        for i, x in enumerate(self.calcstations):
-
-            dxl = dx.evaluate(x) + Dx(x)
-            dyl = dy.evaluate(x) + Dy(x)
-
-            dlocal_span[i, 0] = x + (dxl * scale)
-            dlocal_span[i, 1] = dyl * scale
-
-        return dlocal_span
-
-    def Dglobal_plot(self, combo, scale=1):
-
-        dlocal_plot = self.Dlocal_plot(combo, scale=scale)
-
-        c = (self.jnode.x - self.inode.x) / self.length
-        s = (self.jnode.y - self.inode.y) / self.length
-
-        R = np.matrix([[c, s], [-s, c]])
-
-        dglobal_plot = np.matmul(dlocal_plot, R)
-
-        return dglobal_plot
 
     def Alocal_plot(self, combo, scale=1):
         if not self._stations:
@@ -937,7 +1035,7 @@ class R2Frame:
         Dlocal = self.Dlocal(combo)
 
         sadjust = (Dlocal[0, 4] - Dlocal[0, 1]) / self.length
-        print(sadjust)
+
         for i, x in enumerate(self.calcstations):
 
             s = Szx.evaluate(x)
@@ -959,3 +1057,77 @@ class R2Frame:
         sglobal_plot = np.matmul(slocal_plot, R)
 
         return sglobal_plot
+
+    def Dlocal_plot(self, combo, scale=1):
+
+        if not self._stations:
+            self.stations()
+
+        Dlocal = self.Dlocal(combo)
+
+        # Parametric Functions defining a linear relationship for deflection
+        # in each axis based on the Ux and Uy nodal displacements
+        Dx = lambda x: Dlocal[0, 0] + (x / self.length) * (
+            Dlocal[0, 3] - Dlocal[0, 0]
+        )
+        Dy = lambda x: Dlocal[0, 1] + (x / self.length) * (
+            Dlocal[0, 4] - Dlocal[0, 1]
+        )
+
+        empty_f = np.zeros((6, 1))
+
+        Fendlocal = self.end_forces_local.get(combo, empty_f)
+
+        # Empty Piecwise functions to build the total function from the loading
+        dx = loadtypes.Piecewise_Polynomial()
+        dy = loadtypes.Piecewise_Polynomial()
+
+        # Create "loads" from the end forces and combine with dx and dy
+        fxi = loadtypes.R2_Axial_Load(Fendlocal[0, 0], 0, self)
+        fyi = loadtypes.R2_Point_Load(Fendlocal[1, 0], 0, self)
+        mzi = loadtypes.R2_Point_Moment(Fendlocal[2, 0], 0, self)
+        fxj = loadtypes.R2_Axial_Load(Fendlocal[3, 0], self.length, self)
+        fyj = loadtypes.R2_Point_Load(Fendlocal[4, 0], self.length, self)
+        mzj = loadtypes.R2_Point_Moment(Fendlocal[5, 0], self.length, self)
+
+        dx = dx.combine(fxi.Dx, 1, 1)
+        dy = dy.combine(fyi.Dy, 1, 1)
+        dy = dy.combine(mzi.Dy, 1, 1)
+        dx = dx.combine(fxj.Dx, 1, 1)
+        dy = dy.combine(fyj.Dy, 1, 1)
+        dy = dy.combine(mzj.Dy, 1, 1)
+
+        # Combine Piecewise Deflection Functions of all of the loads
+        if self._loaded:
+
+            for load in self.loads:
+
+                if load.loadcase == combo:
+
+                    dx = dx.combine(load.Dx, 1, 1)
+                    dy = dy.combine(load.Dy, 1, 1)
+
+        dlocal_span = np.zeros((len(self.calcstations), 2))
+
+        for i, x in enumerate(self.calcstations):
+
+            dxl = dx.evaluate(x) + Dx(x)
+            dyl = dy.evaluate(x) + Dy(x)
+
+            dlocal_span[i, 0] = x + (dxl * scale)
+            dlocal_span[i, 1] = dyl * scale
+
+        return dlocal_span
+
+    def Dglobal_plot(self, combo, scale=1):
+
+        dlocal_plot = self.Dlocal_plot(combo, scale=scale)
+
+        c = (self.jnode.x - self.inode.x) / self.length
+        s = (self.jnode.y - self.inode.y) / self.length
+
+        R = np.matrix([[c, s], [-s, c]])
+
+        dglobal_plot = np.matmul(dlocal_plot, R)
+
+        return dglobal_plot
