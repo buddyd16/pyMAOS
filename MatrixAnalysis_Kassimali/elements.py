@@ -201,7 +201,9 @@ class R2Frame:
     def fix_j(self):
         self.hinges[1] = 0
 
-    def add_point_load(self, p, a, case, direction, location_percent=False):
+    def add_point_load(
+        self, p, a, case="D", direction="y", location_percent=False
+    ):
         """
 
         Parameters
@@ -262,7 +264,15 @@ class R2Frame:
         self._loaded = True
 
     def add_distributed_load(
-        self, wi, wj, a, b, case, direction, location_percent=False
+        self,
+        wi,
+        wj,
+        a,
+        b,
+        case="D",
+        direction="y",
+        location_percent=False,
+        projected=False,
     ):
         """
 
@@ -300,11 +310,20 @@ class R2Frame:
 
             if direction == "Y":
 
+                if projected:
+                    wi = c * wi
+                    wj = c * wj
+
                 wyyi = c * wi
                 wyyj = c * wj
                 wxxi = s * wi
                 wxxj = s * wj
             else:
+
+                if projected:
+                    wi = s * wi
+                    wj = s * wj
+
                 wyyi = -1 * s * wi
                 wyyj = -1 * s * wj
                 wxxi = c * wi
@@ -386,8 +405,6 @@ class R2Frame:
                 loadfef = np.array(load.FEF())
                 fef = fef + loadfef
 
-        print(fef)
-
         if self.hinges == [1, 0]:
 
             Mi = fef[2]
@@ -421,8 +438,6 @@ class R2Frame:
 
         else:
             pass
-
-        print(fef)
 
         return fef
 

@@ -18,48 +18,61 @@ loadcase = "D"
 
 # Nodes
 N1 = R2Node(0, 0, 1)
-N2 = R2Node(60, 0, 2)
-N3 = R2Node(120, 0, 3)
-N4 = R2Node(180, 0, 4)
-N5 = R2Node(240, 0, 5)
-N6 = R2Node(300, 0, 6)
-
-N7 = R2Node(0, 30, 7)
-N8 = R2Node(300, 30, 8)
+N2 = R2Node(8.66, 5, 2)
+N3 = R2Node(20, 0, 3)
+N4 = R2Node(28.66, 5, 4)
+N5 = R2Node(0, 10, 5)
+N6 = R2Node(8.66, 15, 6)
+N7 = R2Node(20, 10, 7)
+N8 = R2Node(28.66, 15, 8)
 
 # Node Restraints
-N1.restraints = [1, 1, 1]
-N7.restraints = [1, 1, 1]
+N1.restraints = [1, 1, 0]
+N2.restraints = [1, 1, 0]
+N3.restraints = [1, 1, 0]
+N4.restraints = [1, 1, 0]
+N5.restraints = [1, 1, 0]
+N6.restraints = [1, 1, 0]
+N7.restraints = [1, 1, 0]
+N8.restraints = [1, 1, 0]
 
 # Node List
 nodes = [N1, N2, N3, N4, N5, N6, N7, N8]
 
 # Nodal Loads
-N6.loads[loadcase] = [0, -10, 0]
-N8.loads[loadcase] = [0, -10, 0]
 
 # Materials
-BeamMaterial = Material(29000)
+BeamMaterial = Material(29000 * 6894.76)
 
 
 # Sections
 # W24x55
-BeamSection = Section(16.2, 1350)
+BeamSection = Section(0.0035, 0.000005770875286)
 
 # Members
 RF1 = R2Frame(N1, N2, BeamMaterial, BeamSection, 1)
-RF2 = R2Frame(N2, N3, BeamMaterial, BeamSection, 2)
-RF3 = R2Frame(N3, N4, BeamMaterial, BeamSection, 3)
-RF4 = R2Frame(N4, N5, BeamMaterial, BeamSection, 4)
-RF5 = R2Frame(N5, N6, BeamMaterial, BeamSection, 5)
-RF6 = R2Frame(N7, N8, BeamMaterial, BeamSection, 6)
+RF2 = R2Frame(N3, N4, BeamMaterial, BeamSection, 2)
+RF3 = R2Frame(N5, N6, BeamMaterial, BeamSection, 1)
+RF4 = R2Frame(N7, N8, BeamMaterial, BeamSection, 2)
 
 # Member List
-members = [RF1, RF2, RF3, RF4, RF5, RF6]
+members = [RF1, RF2, RF3, RF4]
 
 # Member Release
 
 # Member Loads
+RF1.add_distributed_load(
+    -1, -1, 0, 100, direction="Y", location_percent=True, projected=False
+)
+RF2.add_distributed_load(
+    -1, -1, 0, 100, direction="Y", location_percent=True, projected=True
+)
+RF3.add_distributed_load(
+    1, 1, 0, 100, direction="X", location_percent=True, projected=False
+)
+RF4.add_distributed_load(
+    1, 1, 0, 100, direction="X", location_percent=True, projected=True
+)
 
 # Create the 2D Structure
 Structure = R2Struct.R2Structure(nodes, members)
@@ -101,11 +114,11 @@ for i, member in enumerate(members):
 # Plot the structure
 fig, axs = plt.subplots(3, 2)
 
-axial_scale = 1
+axial_scale = 1.0
 shear_scale = 1.0
-moment_scale = 0.005
-rotation_scale = 2000
-displace_scale = 10
+moment_scale = 0.75
+rotation_scale = 100
+displace_scale = 50
 
 axs[0, 0].set_title(
     f"Geometry and Deformed Shape\n scale:{displace_scale}", fontsize=12
