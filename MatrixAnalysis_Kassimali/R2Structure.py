@@ -146,7 +146,7 @@ class R2Structure:
                     ] += kmglobal[i + self.NJD, y + self.NJD]
         return KSTRUCT
 
-    def nodal_force_vector(self, loadcase):
+    def nodal_force_vector(self, load_combination):
         """
         Build the structure nodal force vector mapped to the same partitions
         as KSTRUCT using the freedom map (FM).
@@ -161,16 +161,18 @@ class R2Structure:
 
         for node in self.nodes:
 
-            loads = node.loads.get(loadcase, [0, 0, 0])
+            for load_case, load in node.loads.items():
 
-            for i, load in enumerate(loads):
+                load_factor = load_combination.factors.get(load_case, 0)
+                factored_load = [load_factor * i for i in load]
 
-                fmindex = (node.uid - 1) * self.NJD + i
+                for i, f in enumerate(factored_load):
+                    fmindex = (node.uid - 1) * self.NJD + i
 
-                FG[int(self.FM[fmindex])] += load
+                    FG[int(self.FM[fmindex])] += f
         return FG
 
-    def member_fixed_end_force_vector(self, loadcase):
+    def member_fixed_end_force_vector(self, load_combination):
 
         PF = np.zeros(self.NJD * self.NJ)
 
@@ -178,7 +180,7 @@ class R2Structure:
 
             if member.type != "TRUSS":
 
-                Ff = member.FEFglobal(loadcase)
+                Ff = member.FEFglobal(load_combination)
 
                 fmindexi = (member.inode.uid - 1) * self.NJD
                 fmindexj = (member.jnode.uid - 1) * self.NJD
@@ -192,7 +194,7 @@ class R2Structure:
 
         return PF
 
-    def solve_linear_static(self, loadcase):
+    def solve_linear_static(self, load_combination):
         """
         Perform a linear static solution of the model using the Kff
         and FGf paritions
@@ -212,9 +214,9 @@ class R2Structure:
         else:
 
             # Build Nodal Force Vector
-            FG = self.nodal_force_vector(loadcase)
+            FG = self.nodal_force_vector(load_combination)
             # Build Member Fixed end Force vector
-            PF = self.member_fixed_end_force_vector(loadcase)
+            PF = self.member_fixed_end_force_vector(load_combination)
 
             # Slice out the Kff partition from the global structure stiffness
             # Matrix
@@ -249,25 +251,33 @@ class R2Structure:
                     USTRUCT[rzindex],
                 ]
 
-                node.displacements[loadcase] = node_displacements
+                node.displacements[load_combination.name] = node_displacements
             # compute reactions
-            self.compute_reactions(loadcase)
+            self.compute_reactions(load_combination)
 
             return U
 
-    def compute_reactions(self, loadcase):
+    def compute_reactions(self, load_combination):
         # Compute Reactions
         for node in self.nodes:
 
-            NL = node.loads.get(loadcase, [0, 0, 0])
-            rx = -1 * NL[0]
-            ry = -1 * NL[1]
-            mz = -1 * NL[2]
+            rx = 0
+            ry = 0
+            mz = 0
+
+            for load_case, load in node.loads.items():
+
+                load_factor = load_combination.factors.get(load_case, 0)
+                FNL = [load_factor * i for i in load]
+
+                rx += -1 * FNL[0]
+                ry += -1 * FNL[1]
+                mz += -1 * FNL[2]
 
             for member in self.members:
 
-                member_FG = member.Fglobal(loadcase)
-
+                member_FG = member.Fglobal(load_combination)
+                print(member_FG)
                 if member.inode == node:
                     rx += member_FG[0, 0]
                     ry += member_FG[0, 1]
@@ -276,7 +286,7 @@ class R2Structure:
                     rx += member_FG[0, 3]
                     ry += member_FG[0, 4]
                     mz += member_FG[0, 5]
-            node.reactions[loadcase] = [rx, ry, mz]
+            node.reactions[load_combination.name] = [rx, ry, mz]
 
     def _verify_stable(self):
         """

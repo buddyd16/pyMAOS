@@ -31,7 +31,7 @@ import math
 class R2Node:
     def __init__(self, x, y, uid):
         """
-        
+
         Parameters
         ----------
         x : float
@@ -55,13 +55,19 @@ class R2Node:
         self.restraints_key = ["Ux", "Uy", "Rz"]
         self.restraints = [0, 0, 0]
 
+        # Spring Restraint [kux, kuy, krz]
+        self.spring_stiffness = [0, 0, 0]
+
+        # Enforced Displacement [Ux, Uy, Rz]
+        self.enforced_displacements = [0, 0, 0]
+
         # Dict of Loads by case
         self.loads = {}
 
-        # Dict of Displacements by case
+        # Dict of Displacements by combo
         self.displacements = {}
 
-        # Dict of Reactions by case
+        # Dict of Reactions by combo
         self.reactions = {}
 
     def __str__(self):
@@ -78,21 +84,21 @@ class R2Node:
                     str += f"{self.restraints_key[i]}"
         return str
 
-    def x_displaced(self, loadcase, scale=1.0):
+    def x_displaced(self, load_combination, scale=1.0):
 
-        delta = self.displacements.get(loadcase, [0, 0, 0])
+        delta = self.displacements.get(load_combination.name, [0, 0, 0])
 
         return self.x + (delta[0] * scale)
 
-    def y_displaced(self, loadcase, scale=1.0):
+    def y_displaced(self, load_combination, scale=1.0):
 
-        delta = self.displacements.get(loadcase, [0, 0, 0])
+        delta = self.displacements.get(load_combination.name, [0, 0, 0])
 
         return self.y + (delta[1] * scale)
 
     def distance(self, other):
         """
-        
+
         Parameters
         ----------
         other : R2Node
