@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 ##                                      ##
 ##########################################
 
-# 5 Element Cantilever beam w/ Point Load
+# Sloped beam to test projected loading
 loadcase = "D"
 loadcombo = LoadCombo("S1", {"D": 1}, ["D"], False, "SLS")
 
@@ -54,8 +54,8 @@ BeamSection = Section(0.0035, 0.000005770875286)
 # Members
 RF1 = R2Frame(N1, N2, BeamMaterial, BeamSection, 1)
 RF2 = R2Frame(N3, N4, BeamMaterial, BeamSection, 2)
-RF3 = R2Frame(N5, N6, BeamMaterial, BeamSection, 1)
-RF4 = R2Frame(N7, N8, BeamMaterial, BeamSection, 2)
+RF3 = R2Frame(N5, N6, BeamMaterial, BeamSection, 3)
+RF4 = R2Frame(N7, N8, BeamMaterial, BeamSection, 4)
 
 # Member List
 members = [RF1, RF2, RF3, RF4]
@@ -79,9 +79,10 @@ RF4.add_distributed_load(
 # Create the 2D Structure
 Structure = R2Struct.R2Structure(nodes, members)
 
-Errors = Structure._ERRORS
-K = Structure.Kstructure()
+FM = Structure.freedom_map()
+K = Structure.Kstructure(FM)
 U = Structure.solve_linear_static(loadcombo)
+Errors = Structure._ERRORS
 
 # Print Output
 print("Errors:")

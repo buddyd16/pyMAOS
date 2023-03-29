@@ -65,9 +65,11 @@ RF3.add_point_load(45, 50, loadcase, "yy", location_percent=True)
 # Create the 2D Structure
 Structure = R2Struct.R2Structure(nodes, members)
 
-Errors = Structure._ERRORS
-K = Structure.Kstructure()
+
+FM = Structure.freedom_map()
+K = Structure.Kstructure(FM)
 U = Structure.solve_linear_static(loadcombo)
+Errors = Structure._ERRORS
 
 # Kassimali Reference Values for Section 6.7
 kassimali_displacements = [
@@ -243,6 +245,9 @@ axs[0, 1].grid(True)
 axs[1, 0].grid(True)
 axs[1, 1].grid(True)
 axs[2, 0].grid(True)
+
+plt.axis("square")
+
 fig.tight_layout()
 
 plt.show()

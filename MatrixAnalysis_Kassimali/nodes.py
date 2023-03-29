@@ -29,7 +29,7 @@ import math
 
 
 class R2Node:
-    def __init__(self, x, y, uid):
+    def __init__(self, x, y, uid=None):
         """
 
         Parameters
@@ -56,9 +56,28 @@ class R2Node:
         self.restraints = [0, 0, 0]
 
         # Spring Restraint [kux, kuy, krz]
+        # Spring Stiffness should be 0 for a restrained direction
+        # Spring is still a DOF for the node
         self.spring_stiffness = [0, 0, 0]
 
+        # Directionality of spring
+        # 0 = bidirectional resistance
+        # 1 = spring resists positive axis displacement
+        # -1 = spring resists negative axis displacement
+        self.spring_direction = [0, 0, 0]
+
+        # Spring Stiffness Multiplier
+        # This will be part of Tension/Compression non-linear analysis
+        # and will soften or deactivate entirely the spring
+        # This needs to be done on a per combination basis so this
+        # is a series of dicts for each DOF
+        self._springUxmulti = {}
+        self._springUymulti = {}
+        self._springRzmulti = {}
+
         # Enforced Displacement [Ux, Uy, Rz]
+        # Enforced Displacements count as a restrained DOF if that
+        # DOF is not already restrained by a support condition
         self.enforced_displacements = [0, 0, 0]
 
         # Dict of Loads by case

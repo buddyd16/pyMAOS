@@ -63,14 +63,24 @@ class R2Structure:
         # Degrees of Freedom
         self.NDOF = (self.NJD * self.NJ) - self.NR
 
-        # Freedom Map
-        self.FM = self.freedom_map()
-
-        # Structure Stiffness Matrix
-        self.KSTRUCT = self.Kstructure()
-
         # Data Stores
         self._D = {}  # Structure Displacement Vector Dictionary
+
+    def set_node_uids(self):
+        i = 1
+
+        for node in self.nodes:
+
+            node.uid = i
+            i += 1
+
+    def set_member_uids(self):
+
+        i = 1
+
+        for member in self.members:
+            member.uid = i
+            i += 1
 
     def freedom_map(self):
         # Freedom Map
@@ -98,7 +108,7 @@ class R2Structure:
                     k += 1
         return FM
 
-    def Kstructure(self):
+    def Kstructure(self, FM):
         """
         Build the structure stiffness matrix orgnized into paritioned form
         using the freedom map to reposition nodal DOFs
@@ -120,12 +130,12 @@ class R2Structure:
 
             # Freedom map for i and j nodes
             imap = [
-                int(self.FM[(member.inode.uid - 1) * self.NJD + r])
+                int(FM[(member.inode.uid - 1) * self.NJD + r])
                 for r in range(self.NJD)
             ]
             imap.extend(
                 [
-                    int(self.FM[(member.jnode.uid - 1) * self.NJD + r])
+                    int(FM[(member.jnode.uid - 1) * self.NJD + r])
                     for r in range(self.NJD)
                 ]
             )
@@ -146,7 +156,7 @@ class R2Structure:
                     ] += kmglobal[i + self.NJD, y + self.NJD]
         return KSTRUCT
 
-    def nodal_force_vector(self, load_combination):
+    def nodal_force_vector(self, FM, load_combination):
         """
         Build the structure nodal force vector mapped to the same partitions
         as KSTRUCT using the freedom map (FM).
@@ -169,10 +179,10 @@ class R2Structure:
                 for i, f in enumerate(factored_load):
                     fmindex = (node.uid - 1) * self.NJD + i
 
-                    FG[int(self.FM[fmindex])] += f
+                    FG[int(FM[fmindex])] += f
         return FG
 
-    def member_fixed_end_force_vector(self, load_combination):
+    def member_fixed_end_force_vector(self, FM, load_combination):
 
         PF = np.zeros(self.NJD * self.NJ)
 
@@ -185,12 +195,12 @@ class R2Structure:
                 fmindexi = (member.inode.uid - 1) * self.NJD
                 fmindexj = (member.jnode.uid - 1) * self.NJD
 
-                PF[int(self.FM[fmindexi])] += Ff[0, 0]
-                PF[int(self.FM[fmindexi + 1])] += Ff[0, 1]
-                PF[int(self.FM[fmindexi + 2])] += Ff[0, 2]
-                PF[int(self.FM[fmindexj])] += Ff[0, 3]
-                PF[int(self.FM[fmindexj + 1])] += Ff[0, 4]
-                PF[int(self.FM[fmindexj + 2])] += Ff[0, 5]
+                PF[int(FM[fmindexi])] += Ff[0, 0]
+                PF[int(FM[fmindexi + 1])] += Ff[0, 1]
+                PF[int(FM[fmindexi + 2])] += Ff[0, 2]
+                PF[int(FM[fmindexj])] += Ff[0, 3]
+                PF[int(FM[fmindexj + 1])] += Ff[0, 4]
+                PF[int(FM[fmindexj + 2])] += Ff[0, 5]
 
         return PF
 
@@ -205,8 +215,13 @@ class R2Structure:
             DESCRIPTION.
 
         """
+        # Generate Freedom Map
+        FM = self.freedom_map()
 
-        self._verify_stable()
+        # Generate Full Structure Stiffness Matrix
+        KSTRUCT = self.Kstructure(FM)
+
+        self._verify_stable(FM, KSTRUCT)
 
         if self._unstable:
 
@@ -214,13 +229,14 @@ class R2Structure:
         else:
 
             # Build Nodal Force Vector
-            FG = self.nodal_force_vector(load_combination)
+            FG = self.nodal_force_vector(FM, load_combination)
+
             # Build Member Fixed end Force vector
-            PF = self.member_fixed_end_force_vector(load_combination)
+            PF = self.member_fixed_end_force_vector(FM, load_combination)
 
             # Slice out the Kff partition from the global structure stiffness
             # Matrix
-            self.Kff = self.KSTRUCT[0 : self.NDOF, 0 : self.NDOF]
+            self.Kff = KSTRUCT[0 : self.NDOF, 0 : self.NDOF]
 
             # Slice out the FGf partition from the global nodal force vector
             self.FGf = FG[0 : self.NDOF]
@@ -241,9 +257,9 @@ class R2Structure:
             # store displacement results to the current case to the nodes
             for node in self.nodes:
 
-                uxindex = int(self.FM[(node.uid - 1) * self.NJD + 0])
-                uyindex = int(self.FM[(node.uid - 1) * self.NJD + 1])
-                rzindex = int(self.FM[(node.uid - 1) * self.NJD + 2])
+                uxindex = int(FM[(node.uid - 1) * self.NJD + 0])
+                uyindex = int(FM[(node.uid - 1) * self.NJD + 1])
+                rzindex = int(FM[(node.uid - 1) * self.NJD + 2])
 
                 node_displacements = [
                     USTRUCT[uxindex],
@@ -277,7 +293,7 @@ class R2Structure:
             for member in self.members:
 
                 member_FG = member.Fglobal(load_combination)
-                print(member_FG)
+
                 if member.inode == node:
                     rx += member_FG[0, 0]
                     ry += member_FG[0, 1]
@@ -288,7 +304,7 @@ class R2Structure:
                     mz += member_FG[0, 5]
             node.reactions[load_combination.name] = [rx, ry, mz]
 
-    def _verify_stable(self):
+    def _verify_stable(self, FM, KSTRUCT):
         """
         Check the diagonal terms of the stiffness matrix against support conditions
         If diagonal term is 0 and the node is unsupported for that DOF then the
@@ -308,10 +324,10 @@ class R2Structure:
             for i, dof in enumerate(node.restraints):
 
                 fmindex = (node.uid - 1) * self.NJD + i
-                val = self.FM[fmindex]
+                val = FM[fmindex]
 
                 # value the diagonal position in the stiffness matrix
-                kval = self.KSTRUCT[int(val), int(val)]
+                kval = KSTRUCT[int(val), int(val)]
 
                 if kval == 0 and dof != 1:
 

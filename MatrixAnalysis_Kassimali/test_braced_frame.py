@@ -14,67 +14,78 @@ import matplotlib.pyplot as plt
 ##                                      ##
 ##########################################
 
-# 5 Element Cantilever beam w/ Point Load
+# Sloped beam to test braced frame
 loadcase = "D"
 loadcombo = LoadCombo("S1", {"D": 1}, ["D"], False, "SLS")
-loadcombos = [loadcombo, LoadCombo("D1", {"D": 1.4}, ["D"], False, "ULS")]
 
 # Nodes
-N1 = R2Node(0, 0, 1)
-N2 = R2Node(60, 0, 2)
-N3 = R2Node(120, 0, 3)
-N4 = R2Node(180, 0, 4)
-N5 = R2Node(240, 0, 5)
-N6 = R2Node(300, 0, 6)
+N1 = R2Node(0, 0)
+N2 = R2Node(0, 120)
+N3 = R2Node(120, 120)
+N4 = R2Node(120, 0)
 
-N7 = R2Node(0, 30, 7)
-N8 = R2Node(300, 30, 8)
 
 # Node Restraints
-N1.restraints = [1, 1, 1]
-N7.restraints = [1, 1, 1]
+N1.restraints = [1, 1, 0]
+N2.restraints = [0, 0, 0]
+N3.restraints = [0, 0, 0]
+N4.restraints = [1, 1, 0]
 
 # Node List
-nodes = [N1, N2, N3, N4, N5, N6, N7, N8]
+nodes = [N1, N2, N3, N4]
 
 # Nodal Loads
-N6.loads[loadcase] = [0, -10, 0]
-N8.loads[loadcase] = [0, -10, 0]
+# N2.loads[loadcase] = [50, 0, 0]
+
 
 # Materials
-BeamMaterial = Material(29000)
+SteelMaterial = Material(0.00028, 29000)
 
 
 # Sections
-# W24x55
-BeamSection = Section(16.2, 1350)
+# W16x40
+BeamSection = Section(11.8, 518, 28.9)
+# W8x24, weak
+ColumnSection = Section(7.08, 18.3, 82.7)
+# L2x2x3/8
+BraceSection = Section(1.37, 0.476, 0.476)
 
 # Members
-RF1 = R2Frame(N1, N2, BeamMaterial, BeamSection, 1)
-RF2 = R2Frame(N2, N3, BeamMaterial, BeamSection, 2)
-RF3 = R2Frame(N3, N4, BeamMaterial, BeamSection, 3)
-RF4 = R2Frame(N4, N5, BeamMaterial, BeamSection, 4)
-RF5 = R2Frame(N5, N6, BeamMaterial, BeamSection, 5)
-RF6 = R2Frame(N7, N8, BeamMaterial, BeamSection, 6)
+RF1 = R2Frame(N1, N2, SteelMaterial, ColumnSection, 1)
+RF2 = R2Frame(N2, N3, SteelMaterial, BeamSection, 2)
+RF3 = R2Frame(N3, N4, SteelMaterial, ColumnSection, 3)
+RF4 = R2Truss(N2, N4, SteelMaterial, BraceSection, 4)
+RF5 = R2Truss(N1, N3, SteelMaterial, BraceSection, 5)
 
 # Member List
-members = [RF1, RF2, RF3, RF4, RF5, RF6]
+members = [RF1, RF2, RF3, RF4, RF5]
+# members = [RF1, RF2, RF3, RF5]
 
 # Member Release
+RF2.hinge_i()
+RF2.hinge_j()
 
 # Member Loads
+RF1.add_distributed_load(
+    1 / 12, 1 / 12, 0, 100, loadcase, "X", location_percent=True
+)
+RF2.add_distributed_load(
+    -1 / 12, -1 / 12, 0, 100, loadcase, "yy", location_percent=True
+)
+RF3.add_distributed_load(
+    0.5 / 12, 0.5 / 12, 0, 100, loadcase, "X", location_percent=True
+)
 
 # Create the 2D Structure
 Structure = R2Struct.R2Structure(nodes, members)
 
 
+Structure.set_node_uids()
+Structure.set_member_uids()
 FM = Structure.freedom_map()
 K = Structure.Kstructure(FM)
 U = Structure.solve_linear_static(loadcombo)
 Errors = Structure._ERRORS
-
-for combo in loadcombos:
-    Structure.solve_linear_static(combo)
 
 # Print Output
 print("Errors:")
@@ -109,10 +120,10 @@ for i, member in enumerate(members):
 # Plot the structure
 fig, axs = plt.subplots(3, 2)
 
-axial_scale = 1
-shear_scale = 1.0
-moment_scale = 0.005
-rotation_scale = 2000
+axial_scale = 0.5
+shear_scale = 1
+moment_scale = 0.25
+rotation_scale = 500
 displace_scale = 10
 
 axs[0, 0].set_title(
@@ -219,6 +230,8 @@ axs[0, 1].grid(True)
 axs[1, 0].grid(True)
 axs[1, 1].grid(True)
 axs[2, 0].grid(True)
+
+plt.axis("square")
 
 fig.tight_layout()
 
