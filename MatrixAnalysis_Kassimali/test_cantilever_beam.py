@@ -4,15 +4,14 @@ from material import LinearElasticMaterial as Material
 from section import Section
 import R2Structure as R2Struct
 from loadcombos import LoadCombo
+import plot_structure
 
-import matplotlib.pyplot as plt
 
-
-##########################################
-##                                      ##
-## CONSISTENT UNIT SYTEM REQUIRED !!!!! ##
-##                                      ##
-##########################################
+########################################
+#                                      #
+# CONSISTENT UNIT SYSTEM REQUIRED !!!! #
+#                                      #
+########################################
 
 # 5 Element Cantilever beam w/ Point Load
 loadcase = "D"
@@ -31,8 +30,12 @@ N7 = R2Node(0, 30, 7)
 N8 = R2Node(300, 30, 8)
 
 # Node Restraints
-N1.restraints = [1, 1, 1]
-N7.restraints = [1, 1, 1]
+N2.releaseAll()
+N3.releaseAll()
+N4.releaseAll()
+N5.releaseAll()
+N6.releaseAll()
+N8.releaseAll()
 
 # Node List
 nodes = [N1, N2, N3, N4, N5, N6, N7, N8]
@@ -107,119 +110,15 @@ for i, member in enumerate(members):
 
 
 # Plot the structure
-fig, axs = plt.subplots(3, 2)
+scaling = {
+        "axial_load": 10,
+        "normal_load": 10,
+        "point_load": 1,
+        "axial": 1,
+        "shear": 1,
+        "moment": 0.01,
+        "rotation": 1000,
+        "displacement": 50,
+    }
 
-axial_scale = 1
-shear_scale = 1.0
-moment_scale = 0.005
-rotation_scale = 2000
-displace_scale = 10
-
-axs[0, 0].set_title(
-    f"Geometry and Deformed Shape\n scale:{displace_scale}", fontsize=12
-)
-
-axs[0, 1].set_title(f"Axial Force\n scale:{axial_scale}", fontsize=12)
-
-axs[1, 0].set_title(f"Shear Force\n scale:{shear_scale}", fontsize=12)
-
-axs[1, 1].set_title(f"Moment\n scale:{moment_scale}", fontsize=12)
-
-axs[2, 0].set_title(
-    f"Cross-Section Rotation\n scale:{rotation_scale}", fontsize=12
-)
-
-for node in nodes:
-    axs[0, 0].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[0, 1].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[1, 0].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[1, 1].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[2, 0].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[0, 0].plot(
-        node.x_displaced(loadcombo, displace_scale),
-        node.y_displaced(loadcombo, displace_scale),
-        marker=".",
-        markersize=10,
-        color="gray",
-    )
-for member in members:
-    axs[0, 0].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    axs[0, 1].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    axs[1, 0].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    axs[1, 1].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    axs[2, 0].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    aglobal = member.Aglobal_plot(loadcombo, axial_scale)
-    vglobal = member.Vglobal_plot(loadcombo, shear_scale)
-    mglobal = member.Mglobal_plot(loadcombo, moment_scale)
-    sglobal = member.Sglobal_plot(loadcombo, rotation_scale)
-    dglobal = member.Dglobal_plot(loadcombo, displace_scale)
-
-    axs[0, 1].plot(
-        (aglobal[:, 0] + member.inode.x),
-        (aglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="blue",
-    )
-
-    axs[1, 0].plot(
-        (vglobal[:, 0] + member.inode.x),
-        (vglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="green",
-    )
-
-    axs[1, 1].plot(
-        (mglobal[:, 0] + member.inode.x),
-        (mglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="red",
-    )
-
-    axs[0, 0].plot(
-        (dglobal[:, 0] + member.inode.x),
-        (dglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="gray",
-    )
-
-    axs[2, 0].plot(
-        (sglobal[:, 0] + member.inode.x),
-        (sglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="purple",
-    )
-
-axs[0, 0].grid(True)
-axs[0, 1].grid(True)
-axs[1, 0].grid(True)
-axs[1, 1].grid(True)
-axs[2, 0].grid(True)
-
-fig.tight_layout()
-
-plt.show()
+plot_structure.plot_structure(nodes, members, loadcombo, scaling)

@@ -25,12 +25,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-# from nodes import R2Node
-# from elements import R2Truss, R2Frame
-# from material import LinearElasticMaterial as Material
-# from section import Section
-# import loading as loads
-
 import numpy as np
 
 
@@ -39,11 +33,6 @@ class R2Structure:
 
         self.nodes = nodes
         self.members = members
-
-        # Flags
-        self._unstable = False
-        self._Kgenerated = False
-        self._ERRORS = []
 
         # Structure Type
         # 2D Structure
@@ -64,7 +53,14 @@ class R2Structure:
         self.NDOF = (self.NJD * self.NJ) - self.NR
 
         # Data Stores
+        self._springNodes = None
+        self._nonlinearNodes = None
         self._D = {}  # Structure Displacement Vector Dictionary
+
+        # Flags
+        self._unstable = False
+        self._Kgenerated = False
+        self._ERRORS = []
 
     def set_node_uids(self):
         i = 1
@@ -81,6 +77,26 @@ class R2Structure:
         for member in self.members:
             member.uid = i
             i += 1
+
+    def spring_nodes(self):
+
+        # loop through nodes and create a list of the nodes with springs
+        # assigned to a DOF.
+        springNodes = []
+        nonlinearNodes = []
+        for node in self.nodes:
+            if node._isSpring is True:
+                springNodes.append(node)
+
+            if node._isNonLinear is True:
+                nonlinearNodes.append(node)
+        
+        if springNodes:
+            self._springNodes = springNodes
+        
+        if nonlinearNodes:
+            self._nonlinearNodes = nonlinearNodes
+
 
     def freedom_map(self):
         # Freedom Map
@@ -130,8 +146,7 @@ class R2Structure:
 
             # Freedom map for i and j nodes
             imap = [
-                int(FM[(member.inode.uid - 1) * self.NJD + r])
-                for r in range(self.NJD)
+                int(FM[(member.inode.uid - 1) * self.NJD + r]) for r in range(self.NJD)
             ]
             imap.extend(
                 [
@@ -145,15 +160,26 @@ class R2Structure:
                 for y in range(self.NJD):
 
                     KSTRUCT[imap[i], imap[y]] += kmglobal[i, y]
-                    KSTRUCT[imap[i + self.NJD], imap[y]] += kmglobal[
-                        i + self.NJD, y
+                    KSTRUCT[imap[i + self.NJD], imap[y]] += kmglobal[i + self.NJD, y]
+                    KSTRUCT[imap[i], imap[y + self.NJD]] += kmglobal[i, y + self.NJD]
+                    KSTRUCT[imap[i + self.NJD], imap[y + self.NJD]] += kmglobal[
+                        i + self.NJD, y + self.NJD
                     ]
-                    KSTRUCT[imap[i], imap[y + self.NJD]] += kmglobal[
-                        i, y + self.NJD
-                    ]
-                    KSTRUCT[
-                        imap[i + self.NJD], imap[y + self.NJD]
-                    ] += kmglobal[i + self.NJD, y + self.NJD]
+        
+        # Loop through Spring Nodes and add the spring stiffness
+        if self._springNodes:
+            for node in self._springNodes:
+                uxposition = int(FM[(node.uid - 1) * self.NJD + 0])
+                uyposition = int(FM[(node.uid - 1) * self.NJD + 1])
+                rzposition = int(FM[(node.uid - 1) * self.NJD + 2])
+                kux = node._spring_stiffness[0]
+                kuy = node._spring_stiffness[1]
+                krz = node._spring_stiffness[2]
+
+                KSTRUCT[uxposition, uxposition] += kux
+                KSTRUCT[uyposition, uyposition] += kuy
+                KSTRUCT[rzposition, rzposition] += krz
+
         return KSTRUCT
 
     def nodal_force_vector(self, FM, load_combination):
@@ -306,13 +332,14 @@ class R2Structure:
 
     def _verify_stable(self, FM, KSTRUCT):
         """
-        Check the diagonal terms of the stiffness matrix against support conditions
-        If diagonal term is 0 and the node is unsupported for that DOF then the
-        Kmatrix is singular and unstable.
+        Check the diagonal terms of the stiffness matrix against support
+        conditions If diagonal term is 0 and the node is unsupported for
+        that DOF then the Kmatrix is singular and unstable.
 
         Returns
         -------
-        If unstable returns a dictionary of unstable nodes and degree of freedom marked unstable.
+        If unstable returns a dictionary of unstable nodes
+        and degree of freedom marked unstable.
 
         """
 

@@ -271,6 +271,8 @@ class R2_Point_Moment:
             ],
         ]
 
+        self.Wx = Piecewise_Polynomial()  # Axial Load Function
+        self.Wy = Piecewise_Polynomial()  # Vertical Load Function
         self.Ax = Piecewise_Polynomial()
         self.Dx = Piecewise_Polynomial()
         self.Vy = Piecewise_Polynomial(Vy)
@@ -284,9 +286,7 @@ class R2_Point_Moment:
         L = self.L
 
         # Constants of Integration
-        self.c1 = ((3 * M * a * a) - (6 * L * M * a) + (2 * L * L * M)) / (
-            6 * L
-        )
+        self.c1 = ((3 * M * a * a) - (6 * L * M * a) + (2 * L * L * M)) / (6 * L)
 
         self.c2 = ((3 * M * a * a) + (2 * L * L * M)) / (6 * L)
 
@@ -368,6 +368,8 @@ class R2_Point_Load:
         Dy[0][0] = [i / self.EI for i in Dy[0][0]]
         Dy[1][0] = [i / self.EI for i in Dy[1][0]]
 
+        self.Wx = Piecewise_Polynomial()  # Axial Load Function
+        self.Wy = Piecewise_Polynomial()  # Vertical Load Function
         self.Ax = Piecewise_Polynomial()
         self.Dx = Piecewise_Polynomial()
         self.Vy = Piecewise_Polynomial(Vy)
@@ -425,15 +427,26 @@ class R2_Linear_Load:
 
         # Simple End Reactions
         self.W = 0.5 * self.c * (self.w2 + self.w1)
-        self.cbar = (
-            (self.w1 + (2 * self.w2)) / (3 * (self.w2 + self.w1))
-        ) * self.c
+        self.cbar = ((self.w1 + (2 * self.w2)) / (3 * (self.w2 + self.w1))) * self.c
 
         self.Rjy = -1 * self.W * (self.a + self.cbar) * (1 / self.L)
         self.Riy = -1 * self.W - self.Rjy
 
         # Piecewise Functions
         # [co....cn x^n] [xa, xb]
+        Wy = [
+            [[0], [0, self.a]],
+            [
+                [
+                    ((-1 * self.a * self.w2) - (self.c * self.w1) - (self.a * self.w1))
+                    / self.c,
+                    (self.w2 - self.w1) / self.c,
+                ],
+                [self.a, self.b],
+            ],
+            [[0], [self.b, self.L]],
+        ]
+
         Vy = [
             [[self.c1], [0, self.a]],
             [
@@ -511,6 +524,8 @@ class R2_Linear_Load:
         Dy[1][0] = [i / self.EI for i in Dy[1][0]]
         Dy[2][0] = [i / self.EI for i in Dy[2][0]]
 
+        self.Wx = Piecewise_Polynomial()  # Axial Load Function
+        self.Wy = Piecewise_Polynomial(Wy)  # Vertical Load Function
         self.Ax = Piecewise_Polynomial()
         self.Dx = Piecewise_Polynomial()
         self.Vy = Piecewise_Polynomial(Vy)
@@ -540,19 +555,10 @@ class R2_Linear_Load:
                 )
                 * w2
             )
-            + (
-                (
-                    (b * b * b)
-                    - (3 * L * b * b)
-                    - (3 * a * a * b)
-                    + (2 * a * a * a)
-                )
-                * w1
-            )
+            + (((b * b * b) - (3 * L * b * b) - (3 * a * a * b) + (2 * a * a * a)) * w1)
         ) / (6 * L * b - 6 * L * a)
         self.c3 = (
-            ((2 * b * b - a * b - a * a) * w2)
-            + ((b * b + a * b - 2 * a * a) * w1)
+            ((2 * b * b - a * b - a * a) * w2) + ((b * b + a * b - 2 * a * a) * w1)
         ) / (6 * L)
         self.c4 = 0
         self.c5 = (
@@ -562,10 +568,7 @@ class R2_Linear_Load:
         )
         self.c6 = (
             -1
-            * (
-                (2 * b * b - a * b - a * a) * w2
-                + (b * b + a * b - 2 * a * a) * w1
-            )
+            * ((2 * b * b - a * b - a * a) * w2 + (b * b + a * b - 2 * a * a) * w1)
             / 6
         )
         self.c7 = (
@@ -703,7 +706,6 @@ class R2_Axial_Load:
 
         # Piecewise Functions
         # [co....cn x^n] [xa, xb]
-
         Ax = [
             [[-1 * self.Rix], [0, self.a]],
             [[-1 * self.Rix - self.p], [self.a, self.L]],
@@ -717,6 +719,8 @@ class R2_Axial_Load:
         Dx[0][0] = [i / self.EA for i in Dx[0][0]]
         Dx[1][0] = [i / self.EA for i in Dx[1][0]]
 
+        self.Wx = Piecewise_Polynomial()  # Axial Load Function
+        self.Wy = Piecewise_Polynomial()  # Vertical Load Function
         self.Ax = Piecewise_Polynomial(Ax)
         self.Dx = Piecewise_Polynomial(Dx)
         self.Vy = Piecewise_Polynomial()
@@ -773,6 +777,18 @@ class R2_Axial_Linear_Load:
 
         # Piecewise Functions
         # [co....cn x^n] [xa, xb]
+        Wx = [
+            [[0], [0, self.a]],
+            [
+                [
+                    ((-1 * self.a * self.w2) - (self.c * self.w1) - (self.a * self.w1))
+                    / self.c,
+                    (self.w2 - self.w1) / self.c,
+                ],
+                [self.a, self.b],
+            ],
+            [[0], [self.b, self.L]],
+        ]
 
         Ax = [
             [[-1 * self.Rix], [0, self.a]],
@@ -805,6 +821,8 @@ class R2_Axial_Linear_Load:
         Dx[1][0] = [i / self.EA for i in Dx[1][0]]
         Dx[2][0] = [i / self.EA for i in Dx[2][0]]
 
+        self.Wx = Piecewise_Polynomial(Wx)  # Axial Load Function
+        self.Wy = Piecewise_Polynomial()  # Vertical Load Function
         self.Ax = Piecewise_Polynomial(Ax)
         self.Dx = Piecewise_Polynomial(Dx)
         self.Vy = Piecewise_Polynomial()
@@ -821,13 +839,7 @@ class R2_Axial_Linear_Load:
         Ri = self.Rix
 
         self.c1 = -(
-            (
-                a * a * w2
-                - 2 * a * b * w1
-                + a * a * w1
-                + 2 * Ri * b
-                - 2 * Ri * a
-            )
+            (a * a * w2 - 2 * a * b * w1 + a * a * w1 + 2 * Ri * b - 2 * Ri * a)
             / (2 * (b - a))
         )
 
@@ -849,17 +861,8 @@ class R2_Axial_Linear_Load:
 
         Rix = (
             (b - a)
-            * (
-                2 * b * w2
-                + a * w2
-                - 3 * L * w2
-                + b * w1
-                + 2 * a * w1
-                - 3 * L * w1
-            )
+            * (2 * b * w2 + a * w2 - 3 * L * w2 + b * w1 + 2 * a * w1 - 3 * L * w1)
         ) / (6 * L)
-        Rjx = -1 * (
-            ((b - a) * (2 * b * w2 + a * w2 + b * w1 + 2 * a * w1)) / (6 * L)
-        )
+        Rjx = -1 * (((b - a) * (2 * b * w2 + a * w2 + b * w1 + 2 * a * w1)) / (6 * L))
 
         return [Rix, 0, 0, Rjx, 0, 0]

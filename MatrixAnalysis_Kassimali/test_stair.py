@@ -4,15 +4,14 @@ from material import LinearElasticMaterial as Material
 from section import Section
 import R2Structure as R2Struct
 from loadcombos import LoadCombo
+import plot_structure
 
-import matplotlib.pyplot as plt
 
-
-##########################################
-##                                      ##
-## CONSISTENT UNIT SYTEM REQUIRED !!!!! ##
-##                                      ##
-##########################################
+########################################
+#                                      #
+# CONSISTENT UNIT SYSTEM REQUIRED !!!! #
+#                                      #
+########################################
 
 # Units
 # Length - inches
@@ -32,10 +31,10 @@ N4 = R2Node((6.16 + 3.67 + 6.33) * 12, (5.76 + 5.1) * 12)
 
 
 # Node Restraints
-N1.restraints = [1, 1, 0]
-N2.restraints = [0, 0, 0]
-N3.restraints = [0, 0, 0]
-N4.restraints = [1, 1, 0]
+N1.releaseMz()
+N2.releaseAll()
+N3.releaseAll()
+N4.releaseMz()
 
 # Node List
 nodes = [N1, N2, N3, N4]
@@ -72,15 +71,9 @@ RF2.add_distributed_load(sw, sw, 0, 100, loadcase, "Y", location_percent=True)
 RF3.add_distributed_load(sw, sw, 0, 100, loadcase, "Y", location_percent=True)
 
 sdl = -0.10093 / 12
-RF1.add_distributed_load(
-    sdl, sdl, 0, 100, loadcase, "Y", location_percent=True
-)
-RF2.add_distributed_load(
-    sdl, sdl, 0, 100, loadcase, "Y", location_percent=True
-)
-RF3.add_distributed_load(
-    sdl, sdl, 0, 100, loadcase, "Y", location_percent=True
-)
+RF1.add_distributed_load(sdl, sdl, 0, 100, loadcase, "Y", location_percent=True)
+RF2.add_distributed_load(sdl, sdl, 0, 100, loadcase, "Y", location_percent=True)
+RF3.add_distributed_load(sdl, sdl, 0, 100, loadcase, "Y", location_percent=True)
 
 ll = (-100 * 3.67) / (12 * 1000)
 RF1.add_distributed_load(
@@ -112,16 +105,12 @@ print(f"Loadcase: {loadcase}")
 print("Displacements:")
 for i, node in enumerate(nodes):
     tx = node.displacements[loadcombo.name]
-    print(
-        f"N{node.uid} -- Ux: {tx[0]:.4E} -- Uy:{tx[1]:.4E} -- Rz:{tx[2]:.4E}"
-    )
+    print(f"N{node.uid} -- Ux: {tx[0]:.4E} -- Uy:{tx[1]:.4E} -- Rz:{tx[2]:.4E}")
 print("-" * 100)
 print("Reactions:")
 for i, node in enumerate(nodes):
     rx = node.reactions[loadcombo.name]
-    print(
-        f"N{node.uid} -- Rx: {rx[0]:.4E} -- Ry:{rx[1]:.4E} -- Mz:{rx[2]:.4E}"
-    )
+    print(f"N{node.uid} -- Rx: {rx[0]:.4E} -- Ry:{rx[1]:.4E} -- Mz:{rx[2]:.4E}")
 print("-" * 100)
 print("Member Forces:")
 for i, member in enumerate(members):
@@ -139,16 +128,12 @@ print(f"Loadcase: {loadcase2}")
 print("Displacements:")
 for i, node in enumerate(nodes):
     tx = node.displacements[loadcombo2.name]
-    print(
-        f"N{node.uid} -- Ux: {tx[0]:.4E} -- Uy:{tx[1]:.4E} -- Rz:{tx[2]:.4E}"
-    )
+    print(f"N{node.uid} -- Ux: {tx[0]:.4E} -- Uy:{tx[1]:.4E} -- Rz:{tx[2]:.4E}")
 print("-" * 100)
 print("Reactions:")
 for i, node in enumerate(nodes):
     rx = node.reactions[loadcombo2.name]
-    print(
-        f"N{node.uid} -- Rx: {rx[0]:.4E} -- Ry:{rx[1]:.4E} -- Mz:{rx[2]:.4E}"
-    )
+    print(f"N{node.uid} -- Rx: {rx[0]:.4E} -- Ry:{rx[1]:.4E} -- Mz:{rx[2]:.4E}")
 print("-" * 100)
 print("Member Forces:")
 for i, member in enumerate(members):
@@ -163,139 +148,15 @@ for i, member in enumerate(members):
     )
 
 # Plot the structure
-fig, axs = plt.subplots(2, 3, figsize=(8, 8))
+scaling = {
+        "axial_load": 100,
+        "normal_load": 100,
+        "point_load": 1,
+        "axial": 2,
+        "shear": 2,
+        "moment": 0.1,
+        "rotation": 5000,
+        "displacement": 100,
+    }
 
-axial_scale = 1
-shear_scale = 10
-moment_scale = 0.2
-rotation_scale = 10000
-displace_scale = 100
-
-axs[0, 0].set_title(
-    f"Geometry and Deformed Shape\n scale:{displace_scale}", fontsize=12
-)
-
-axs[0, 1].set_title(f"Axial Force\n scale:{axial_scale}", fontsize=12)
-
-axs[0, 2].set_title(f"Shear Force\n scale:{shear_scale}", fontsize=12)
-
-axs[1, 0].set_title(f"Moment\n scale:{moment_scale}", fontsize=12)
-
-axs[1, 1].set_title(
-    f"Cross-Section Rotation\n scale:{rotation_scale}", fontsize=12
-)
-
-for node in nodes:
-    axs[0, 0].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[0, 1].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[0, 2].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[1, 0].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[1, 1].plot(node.x, node.y, marker=".", markersize=8, color="red")
-    axs[0, 0].plot(
-        node.x_displaced(loadcombo, displace_scale),
-        node.y_displaced(loadcombo, displace_scale),
-        marker=".",
-        markersize=10,
-        color="gray",
-    )
-for member in members:
-    axs[0, 0].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    axs[0, 1].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    axs[0, 2].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    axs[1, 0].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    axs[1, 1].plot(
-        [member.inode.x, member.jnode.x],
-        [member.inode.y, member.jnode.y],
-        linewidth=1,
-        color="blue",
-    )
-    aglobal = member.Aglobal_plot(loadcombo, axial_scale)
-    vglobal = member.Vglobal_plot(loadcombo, shear_scale)
-    mglobal = member.Mglobal_plot(loadcombo, moment_scale)
-    sglobal = member.Sglobal_plot(loadcombo, rotation_scale)
-    dglobal = member.Dglobal_plot(loadcombo, displace_scale)
-
-    axs[0, 1].plot(
-        (aglobal[:, 0] + member.inode.x),
-        (aglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="blue",
-    )
-
-    axs[0, 2].plot(
-        (vglobal[:, 0] + member.inode.x),
-        (vglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="green",
-    )
-
-    axs[1, 0].plot(
-        (mglobal[:, 0] + member.inode.x),
-        (mglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="red",
-    )
-    axs[1, 0].plot(
-        (member.inode.x, mglobal[0, 0] + member.inode.x),
-        (member.inode.y, mglobal[0, 1] + member.inode.y),
-        linewidth=1,
-        color="red",
-    )
-    axs[1, 0].plot(
-        (member.jnode.x, mglobal[-1, 0] + member.inode.x),
-        (member.jnode.y, mglobal[-1, 1] + member.inode.y),
-        linewidth=1,
-        color="red",
-    )
-
-    axs[0, 0].plot(
-        (dglobal[:, 0] + member.inode.x),
-        (dglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="gray",
-    )
-
-    axs[1, 1].plot(
-        (sglobal[:, 0] + member.inode.x),
-        (sglobal[:, 1] + member.inode.y),
-        linewidth=1,
-        color="purple",
-    )
-
-axs[0, 0].grid(True)
-axs[0, 1].grid(True)
-axs[0, 2].grid(True)
-axs[1, 0].grid(True)
-axs[1, 1].grid(True)
-axs[1, 2].grid(True)
-
-axs[0, 0].set_aspect("equal", "box")
-axs[0, 1].set_aspect("equal", "box")
-axs[0, 2].set_aspect("equal", "box")
-axs[1, 0].set_aspect("equal", "box")
-axs[1, 1].set_aspect("equal", "box")
-axs[1, 2].set_aspect("equal", "box")
-
-fig.tight_layout()
-
-plt.show()
+plot_structure.plot_structure(nodes, members, loadcombo, scaling)
